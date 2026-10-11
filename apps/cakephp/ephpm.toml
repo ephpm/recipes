@@ -1,0 +1,33 @@
+# ePHPm configuration for CakePHP 5 — per-request mode.
+# Keys: https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app/webroot"
+index_files = ["index.php"]
+# webroot/.htaccess: RewriteRule ^ index.php [L]
+fallback = ["$uri", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 33554432
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+blocked_paths = ["/config/*", "/src/*", "/tmp/*", "/logs/*", "/vendor/*"]
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+# v0.11.3 inherits PHP's display_errors=1 under `serve`; keep notices out of responses.
+ini_overrides = [["display_errors", "Off"], ["log_errors", "On"]]
+
+# Loopback RESP listener: `ephpm cache reset` after deploys; CakePHP's
+# RedisEngine cache can target 127.0.0.1:6379 (predis or the redis extension).
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

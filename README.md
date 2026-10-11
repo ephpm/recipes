@@ -51,6 +51,7 @@ is untested, and the README says so.
 | [easyappointments](apps/easyappointments/) | Easy!Appointments 1.6 | nginx + php-fpm containers | MariaDB | no (embedded DB rejects `ADD CONSTRAINT`) | tested 2026-10-11, v0.11.3-php8.5 |
 | [codeigniter4](apps/codeigniter4/) | CodeIgniter 4.7 appstarter | apache/nginx + fpm, `spark serve` | MariaDB | yes (experimental) | tested 2026-10-11, v0.11.3-php8.5 (both variants) |
 | [slim](apps/slim/) | Slim 4 skeleton (any PSR-15 app) | nginx + fpm, RoadRunner (worker variant via psr15-worker) | none | single container (native) | tested 2026-10-11, v0.11.3-php8.5 (per-request, worker) |
+| [cakephp](apps/cakephp/) | CakePHP 5.4 app skeleton | apache/nginx + fpm, `bin/cake server` | MariaDB | no (embedded DB rejects `SHOW FULL TABLES`) | tested 2026-10-11, v0.11.3-php8.5 |
 | [firefly-iii](apps/firefly-iii/) | Firefly III | official image (apache) + cron | MariaDB | see README | tested 2026-10-11, v0.11.3-php8.5 |
 | [linkace](apps/linkace/) | LinkAce 2.6 | nginx + fpm (supervisord image) | MariaDB | no (schema dump DDL) | tested 2026-10-11, v0.11.3-php8.5 |
 | [shaarli](apps/shaarli/) | Shaarli | nginx + fpm | flat-file | single container (native) | tested 2026-10-11, v0.11.3-php8.5 |

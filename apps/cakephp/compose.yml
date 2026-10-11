@@ -1,0 +1,45 @@
+# CakePHP 5 on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: apache/nginx + php-fpm (and `bin/cake server`).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-cakephp
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      DEBUG: "false"
+      # SECURITY_SALT: 64-hex-chars   (generated into the tmp volume when unset)
+      DATABASE_URL: mysql://cake:cake@db:3306/cake?encoding=utf8mb4
+    volumes:
+      - tmp:/app/tmp
+      - logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: cake
+      MARIADB_USER: cake
+      MARIADB_PASSWORD: cake
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  tmp:
+  logs:
+  db-data:

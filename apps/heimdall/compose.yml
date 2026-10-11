@@ -1,0 +1,25 @@
+# Heimdall on ePHPm — one container, SQLite in the data volume.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: the linuxserver/heimdall image (nginx + php-fpm + s6).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-heimdall
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      APP_URL: ${APP_URL:-http://localhost:8080}   # the public URL; links are built from it
+      # ALLOW_INTERNAL_REQUESTS: "true"   # let website lookups/icons reach LAN addresses
+      # TRUSTED_HOSTS: heimdall.example.com
+    volumes:
+      - heimdall-data:/data              # .env (APP_KEY) and app.sqlite
+      - heimdall-storage:/app/storage    # uploaded icons, logs, caches
+    restart: unless-stopped
+
+volumes:
+  heimdall-data:
+  heimdall-storage:

@@ -1,0 +1,43 @@
+# ePHPm configuration for Heimdall (Laravel 12, SQLite in the data volume).
+#
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Laravel's web root is public/; the application code sits above it.
+document_root = "/app/public"
+index_files = ["index.php", "index.html"]
+# nginx try_files equivalent: anything that is not a file under public/
+# goes to the front controller.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 10485760            # 10 MiB — icon and background image uploads
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# Uploaded icons/backgrounds are served from public/storage; never execute them.
+blocked_paths = ["/storage/*.php", "/storage/*/*.php"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+    ["upload_max_filesize", "10M"],
+    ["post_max_size", "10M"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` can reach the in-process store.
+# Not published outside the container.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

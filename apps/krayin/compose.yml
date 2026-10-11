@@ -1,0 +1,74 @@
+# Krayin CRM on ePHPm + MariaDB.
+#
+#   KRAYIN_ADMIN_EMAIL=you@example.com KRAYIN_ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080/admin
+#
+# Replaces: a nginx/apache + php-fpm host (and the cron entry for the
+# Laravel scheduler).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-krayin
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: &env
+      # The URL users open Krayin at (links and assets are built from it).
+      APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TIMEZONE: UTC
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: krayin
+      DB_USERNAME: krayin
+      DB_PASSWORD: krayin
+      LOG_CHANNEL: stderr
+      # .env.example points SMTP at a "mailhog" host; log mail until you
+      # configure a real mailer.
+      MAIL_MAILER: log
+      # The admin account the first start creates. Unset, the installer's
+      # default admin@example.com / admin123 is kept — change it.
+      KRAYIN_ADMIN_EMAIL: ${KRAYIN_ADMIN_EMAIL:-}
+      KRAYIN_ADMIN_PASSWORD: ${KRAYIN_ADMIN_PASSWORD:-}
+    volumes:
+      - storage:/app/storage   # uploads, logs, .env (APP_KEY), the installed marker
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Krayin's scheduled jobs (activity reminders, e-mail processing) run
+  # through the Laravel scheduler, which upstream asks you to call from cron
+  # every minute.
+  scheduler:
+    image: recipes-krayin
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    environment: *env
+    volumes:
+      - storage:/app/storage
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: krayin
+      MARIADB_USER: krayin
+      MARIADB_PASSWORD: krayin
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  storage:
+  db-data:

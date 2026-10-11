@@ -1,0 +1,50 @@
+# ePHPm configuration for Krayin CRM (MySQL/MariaDB database).
+#
+# Krayin (Laravel 12) connects to DB_HOST with pdo_mysql; ePHPm is the
+# web server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Laravel's web root is public/; the application code sits above it.
+document_root = "/app/public"
+index_files = ["index.php"]
+# public/.htaccess: anything that is not a file goes to the front controller.
+fallback = ["$uri", "/index.php?$query_string"]
+
+[server.timeouts]
+request = 300                       # imports, quote PDFs
+
+[server.request]
+max_body_size = 67108864            # 64 MiB — lead/contact attachments, imports
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# PHP never runs from the public uploads (public/storage -> storage/app/public).
+blocked_paths = ["/storage/*.php*", "/storage/*.phtml", "/*.htaccess"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 290            # below [server.timeouts] request so PHP's own timeout can fire
+memory_limit = "512M"
+ini_overrides = [
+    # v0.11.3 still inherits PHP's compiled-in display_errors=1 under `ephpm serve`;
+    # keep warnings out of responses and in the container log
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "64M"],
+    ["post_max_size", "64M"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (OPcache refresh after an
+# upgrade) and `ephpm kv ...` can reach the in-process store. Not published
+# outside the container.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

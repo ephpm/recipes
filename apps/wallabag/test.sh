@@ -12,7 +12,7 @@ recipe_init wallabag
 export SYMFONY__ENV__DOMAIN_NAME="$BASE"
 
 # Symfony CSRF tokens are rendered into the forms: pull one out of a page.
-token() { grep -o "name=\"$2\" value=\"[^\"]*\"" "$1" | head -n1 | sed 's/.*value="//; s/"$//'; }
+token() { grep -o "<input[^>]*name=\"$2\"[^>]*>" "$1" | head -n1 | sed 's/.*value="\([^"]*\)".*/\1/'; }
 
 run_variant() {
     COMPOSE_FILE="$DIR/$1"

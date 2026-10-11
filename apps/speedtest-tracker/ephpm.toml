@@ -1,0 +1,38 @@
+# ePHPm configuration for Speedtest Tracker (SQLite by default).
+#
+# Speedtest Tracker (Laravel 13 + Filament 5) uses pdo_sqlite on /data by
+# default; ePHPm is the web server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Laravel's web root is public/; the application code sits above it.
+document_root = "/app/public"
+index_files = ["index.php"]
+# nginx try_files equivalent (the linuxserver nginx config does the same).
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 10485760            # 10 MiB — there are no large uploads
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [
+    # v0.11.3 still inherits PHP's compiled-in display_errors=1 under `ephpm serve`;
+    # keep warnings out of responses and in the container log
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (OPcache refresh after an
+# upgrade) and `ephpm kv ...` can reach the in-process store. Not published
+# outside the container. With CACHE_STORE=redis / SESSION_DRIVER=redis,
+# REDIS_CLIENT=predis and REDIS_HOST=127.0.0.1 the app uses it instead of
+# a Redis service.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

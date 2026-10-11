@@ -1,0 +1,71 @@
+# Speedtest Tracker on ePHPm — SQLite on a volume (upstream's default).
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in with ADMIN_EMAIL / ADMIN_PASSWORD
+#
+# Replaces: the linuxserver/speedtest-tracker image (nginx + php-fpm + s6
+# with its cron and queue runner).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-speedtest-tracker
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: &env
+      # The URL users open the app at.
+      APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TIMEZONE: UTC
+      # SQLite in the data volume (upstream's default); DB_CONNECTION=mysql
+      # plus DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD for MariaDB.
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /data/database.sqlite
+      # The admin the first migration seeds (same variables as the official image).
+      ADMIN_NAME: Admin
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: Recipe-Pass-9731
+      # Speedtests run as queued jobs; the scheduler triggers them on SPEEDTEST_SCHEDULE.
+      QUEUE_CONNECTION: database
+      # SPEEDTEST_SCHEDULE: "0 * * * *"
+      # SPEEDTEST_SERVERS: ""
+      MAIL_MAILER: log
+      # Cache and sessions default to `database` / `cookie` (upstream). To keep
+      # them in ePHPm's in-process KV store instead, uncomment:
+      # CACHE_STORE: redis
+      # SESSION_DRIVER: redis
+      # REDIS_CLIENT: predis
+      # REDIS_HOST: 127.0.0.1
+    volumes:
+      - speedtest-data:/data              # .env (APP_KEY) and the SQLite database
+      - speedtest-storage:/app/storage    # logs, framework caches
+    restart: unless-stopped
+
+  # Upstream runs both of these under s6.
+  scheduler:
+    image: recipes-speedtest-tracker
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    environment: *env
+    volumes:
+      - speedtest-data:/data
+      - speedtest-storage:/app/storage
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  queue:
+    image: recipes-speedtest-tracker
+    command: ["ephpm", "php", "artisan", "queue:work", "--sleep=3", "--tries=3"]
+    environment: *env
+    volumes:
+      - speedtest-data:/data
+      - speedtest-storage:/app/storage
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+volumes:
+  speedtest-data:
+  speedtest-storage:

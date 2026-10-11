@@ -1,0 +1,27 @@
+# Typecho on ePHPm — single container on SQLite (Typecho's own Pdo_SQLite
+# adapter; not ePHPm's embedded database).
+#
+#   docker compose -f compose.sqlite.yml up -d
+#   open http://localhost:8080   (keep TYPECHO_SITE_URL in sync with EPHPM_PORT)
+
+services:
+  ephpm:
+    build: .
+    image: recipes-typecho
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      TYPECHO_SITE_URL: ${TYPECHO_SITE_URL:-http://localhost:8080}
+      TYPECHO_DB_ADAPTER: Pdo_SQLite
+      TYPECHO_DB_FILE: /data/typecho.db       # next to config.inc.php, outside the web root
+      TYPECHO_USER_NAME: ${TYPECHO_USER_NAME:-admin}
+      TYPECHO_USER_PASSWORD: ${TYPECHO_USER_PASSWORD:-change-me-Typecho-9731}
+      TYPECHO_USER_MAIL: ${TYPECHO_USER_MAIL:-admin@example.com}
+    volumes:
+      - typecho-data:/data
+      - typecho-uploads:/app/usr/uploads
+    restart: unless-stopped
+
+volumes:
+  typecho-data:
+  typecho-uploads:

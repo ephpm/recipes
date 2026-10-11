@@ -1,0 +1,57 @@
+# Typecho on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port — keep
+#                                 TYPECHO_SITE_URL in sync with it)
+#
+# Replaces: nginx + php-fpm (the joyqi/typecho images). Same TYPECHO_*
+# variables as joyqi/typecho; the first start installs with them.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-typecho
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      TYPECHO_SITE_URL: ${TYPECHO_SITE_URL:-http://localhost:8080}
+      TYPECHO_DB_ADAPTER: Pdo_Mysql
+      TYPECHO_DB_HOST: db
+      TYPECHO_DB_PORT: "3306"
+      TYPECHO_DB_USER: typecho
+      TYPECHO_DB_PASSWORD: typecho
+      TYPECHO_DB_DATABASE: typecho
+      TYPECHO_DB_CHARSET: utf8mb4
+      TYPECHO_DB_ENGINE: InnoDB
+      TYPECHO_USER_NAME: ${TYPECHO_USER_NAME:-admin}
+      TYPECHO_USER_PASSWORD: ${TYPECHO_USER_PASSWORD:-change-me-Typecho-9731}
+      TYPECHO_USER_MAIL: ${TYPECHO_USER_MAIL:-admin@example.com}
+      # TYPECHO_LANG: zh_CN
+    volumes:
+      - typecho-data:/data                    # config.inc.php
+      - typecho-uploads:/app/usr/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: typecho
+      MARIADB_USER: typecho
+      MARIADB_PASSWORD: typecho
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  typecho-data:
+  typecho-uploads:
+  db-data:

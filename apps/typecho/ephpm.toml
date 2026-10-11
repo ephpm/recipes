@@ -1,0 +1,51 @@
+# ePHPm configuration for Typecho.
+#
+# Typecho connects to its database itself (pdo_mysql or pdo_sqlite); ePHPm
+# is the web server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app"
+index_files = ["index.php", "index.html"]
+# Typecho's nginx rewrite: anything that is not a file → index.php. Typecho
+# works out its route from REQUEST_URI itself, so both the "pretty" URLs
+# (/archives/1/) and the default /index.php/archives/1/ form route without
+# PATH_INFO.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 33554432            # 32 MiB — attachment uploads
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# Code, configuration and the SQLite variant's database are never fetched
+# directly; uploads must not execute.
+blocked_paths = [
+    "/var/*", "/install/*", "/config.inc.php",
+    "/usr/uploads/*.php", "/usr/uploads/*/*.php", "/usr/uploads/*/*/*.php",
+    "/usr/*.db", "/usr/plugins/*/*.php", "/usr/plugins/*/*/*.php",
+]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+    ["upload_max_filesize", "32M"],
+    ["post_max_size", "32M"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` can reach the in-process store.
+# Not published outside the container.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

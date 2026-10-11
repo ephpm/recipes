@@ -101,11 +101,12 @@ expect_status() {
 # expect_body URL grep-pattern [curl args...]
 expect_body() {
     local url="$1" pat="$2"; shift 2
-    # Body captured first: `curl | grep -q` under pipefail fails spuriously
-    # when grep exits on the first match before curl has written everything.
+    # Body captured first, and grep without -q: under pipefail, a grep that
+    # exits on the first match makes the writer die of SIGPIPE and the
+    # pipeline fail even though the pattern matched.
     local body
     body="$(curl -s --max-time 30 "$@" "$url" || true)"
-    if ! printf '%s' "$body" | grep -qE -- "$pat"; then
+    if ! printf '%s' "$body" | grep -E -- "$pat" >/dev/null; then
         echo "!!! $url body does not match /$pat/" >&2
         printf '%s' "$body" | head -c 2000 >&2 || true
         compose logs --tail=80 >&2 || true

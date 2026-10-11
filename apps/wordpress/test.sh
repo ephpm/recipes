@@ -32,7 +32,7 @@ run_variant() {
     expect_body "$BASE/" "Hello from ePHPm"
 
     # 4. the object cache is live in ePHPm's KV store (no Redis anywhere)
-    run_in ephpm ephpm kv keys 'wp:*' | grep -q 'wp:' \
+    run_in ephpm ephpm kv keys 'wp:*' | grep 'wp:' >/dev/null \
         || { echo "!!! object cache not populated"; return 1; }
     echo "==> object cache keys present in the KV store"
 

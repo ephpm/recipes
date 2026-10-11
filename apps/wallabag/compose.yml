@@ -1,0 +1,55 @@
+# wallabag on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080      (log in as wallabag / wallabag, then change it)
+#
+# Replaces: the official wallabag/wallabag image (nginx + php-fpm under s6).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-wallabag
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # Same variable names as wallabag/wallabag.
+      SYMFONY__ENV__DOMAIN_NAME: ${SYMFONY__ENV__DOMAIN_NAME:-http://localhost:8080}
+      SYMFONY__ENV__DATABASE_DRIVER: pdo_mysql
+      SYMFONY__ENV__DATABASE_HOST: db
+      SYMFONY__ENV__DATABASE_PORT: 3306
+      SYMFONY__ENV__DATABASE_NAME: wallabag
+      SYMFONY__ENV__DATABASE_USER: wallabag
+      SYMFONY__ENV__DATABASE_PASSWORD: wallabag
+      SYMFONY__ENV__DATABASE_CHARSET: utf8mb4
+      SYMFONY__ENV__SERVER_NAME: "Your wallabag instance"
+      # SYMFONY__ENV__SECRET: generated once into the data volume when unset
+      # SYMFONY__ENV__MAILER_DSN: smtp://mail:25
+      # SYMFONY__ENV__FOSUSER_REGISTRATION: "true"
+    volumes:
+      - data:/var/www/wallabag/data
+      - images:/var/www/wallabag/web/assets/images
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: wallabag
+      MARIADB_USER: wallabag
+      MARIADB_PASSWORD: wallabag
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  data:
+  images:
+  db-data:

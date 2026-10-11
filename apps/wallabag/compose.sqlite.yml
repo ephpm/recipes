@@ -1,0 +1,25 @@
+# wallabag on ePHPm — single container, wallabag's own SQLite database.
+#
+#   docker compose -f compose.sqlite.yml up -d
+#
+# The official image's default: no database server, data/db/wallabag.sqlite
+# in the data volume (pdo_sqlite is compiled into ePHPm). This is wallabag's
+# documented small-install option, not ePHPm's experimental embedded engine.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-wallabag
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      SYMFONY__ENV__DOMAIN_NAME: ${SYMFONY__ENV__DOMAIN_NAME:-http://localhost:8080}
+      # SYMFONY__ENV__DATABASE_DRIVER defaults to pdo_sqlite
+    volumes:
+      - data:/var/www/wallabag/data
+      - images:/var/www/wallabag/web/assets/images
+    restart: unless-stopped
+
+volumes:
+  data:
+  images:

@@ -1,0 +1,51 @@
+# ePHPm configuration for wallabag — external database (MariaDB/MySQL/PostgreSQL).
+#
+# wallabag reads app/config/parameters.yml (written by entrypoint.sh from the
+# SYMFONY__ENV__* variables); ePHPm is the web server + PHP runtime. Every
+# key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/wallabag/web"
+index_files = ["app.php"]
+# The official image's nginx: try_files $uri /app.php$is_args$args
+# (Symfony 4 front controller; wallabag 2.6 has no public/index.php).
+fallback = ["$uri", "/app.php?$query_string"]
+
+[server.timeouts]
+request = 300                       # fastcgi_read_timeout 300s upstream (article fetching)
+
+[server.request]
+max_body_size = 104857600           # 100 MiB — nginx client_max_body_size (imports)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# The dev front controller and the upstream "internal" rule for app.php
+# (nginx 404s a URL that names the front controller explicitly).
+blocked_paths = ["/app_dev.php*", "/app.php*", "/uploads/*.php", "/assets/images/*.php"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"               # the official image's PHP_MEMORY_LIMIT default is 128M
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+    ["error_reporting", "E_ALL & ~E_DEPRECATED"],   # wallabag 2.6 on PHP 8.4 is noisy; production php.ini value
+    ["upload_max_filesize", "100M"],
+    ["post_max_size", "100M"],
+    ["date.timezone", "UTC"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container (OPcache timestamp
+# validation is off under `ephpm serve`; reset after changing PHP files).
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

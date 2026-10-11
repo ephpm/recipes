@@ -1,0 +1,15 @@
+#!/bin/sh
+# wallabag's Symfony console through the embedded PHP
+# (`docker compose exec ephpm wallabag wallabag:import ...`).
+#
+# - display_errors=stderr / no E_DEPRECATED: php-cli defaults print
+#   deprecations to stdout, and wallabag 2.6 on PHP 8.4 emits plenty at
+#   class-load time. Mirrors the production php.ini the official image uses.
+# - session.use_cookies=0 + empty session.cache_limiter: `ephpm php` reports
+#   headers_sent() as true from the start (issues/wallabag.md), and PHP
+#   refuses to start a session that would send a cookie or a cache-limiter
+#   header after that — which `wallabag:install`'s admin-user step and
+#   `fos:user:create` do. A cookieless, header-less CLI session is fine.
+exec ephpm php -d display_errors=stderr -d 'error_reporting=E_ALL & ~E_DEPRECATED' \
+    -d session.use_cookies=0 -d session.cache_limiter= \
+    /var/www/wallabag/bin/console --env=prod "$@"

@@ -1,0 +1,74 @@
+# Snipe-IT on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   the setup wizard runs on first visit (pre-flight, migrate, admin account)
+#
+# Replaces: the snipe/snipe-it image (Apache + PHP) and a Redis service if
+# you ran one for cache/sessions.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-snipe-it
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: &env
+      # Must be the address users open Snipe-IT at: the setup wizard's
+      # pre-flight compares it with the request URL, and links use it.
+      APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: snipeit
+      DB_USERNAME: snipeit
+      DB_PASSWORD: snipeit
+      MAIL_MAILER: log
+      # Cache and sessions default to the `file` driver (storage/framework).
+      # To keep them in ePHPm's in-process KV store instead, uncomment:
+      # CACHE_DRIVER: redis
+      # SESSION_DRIVER: redis
+      # REDIS_HOST: 127.0.0.1
+    volumes:
+      - snipeit-storage:/app/storage          # private uploads, backups, Passport keys, logs, .env (APP_KEY)
+      - snipeit-uploads:/app/public/uploads   # public images (logos, avatars, asset photos)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Snipe-IT's scheduled jobs (expiring-asset alerts, backups, LDAP sync)
+  # run through the Laravel scheduler; the official image has no cron
+  # either and upstream asks you to run `schedule:run` every minute.
+  scheduler:
+    image: recipes-snipe-it
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    environment: *env
+    volumes:
+      - snipeit-storage:/app/storage
+      - snipeit-uploads:/app/public/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: snipeit
+      MARIADB_USER: snipeit
+      MARIADB_PASSWORD: snipeit
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  snipeit-storage:
+  snipeit-uploads:
+  db-data:

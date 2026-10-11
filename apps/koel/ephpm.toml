@@ -26,6 +26,10 @@ cache_control = "public, max-age=86400"
 max_execution_time = 600            # koel:scan over HTTP-triggered uploads, long streams
 memory_limit = "512M"
 ini_overrides = [
+    # v0.11.3 still inherits PHP's compiled-in display_errors=1 under `ephpm serve`;
+    # keep warnings out of responses and in the container log
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
     ["upload_max_filesize", "512M"],
     ["post_max_size", "512M"],
 ]

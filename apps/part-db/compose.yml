@@ -1,0 +1,58 @@
+# Part-DB on ePHPm + MariaDB.
+#
+#   ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080      (log in as admin / change-me)
+#
+# Replaces: the official jbtronics/part-db1 image (Apache + php-fpm).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-part-db
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # Same variable names as jbtronics/part-db1 (see its .env for all of them).
+      DATABASE_URL: mysql://partdb:partdb@db:3306/partdb?serverVersion=11.4.0-MariaDB
+      APP_ENV: docker              # logs to stderr
+      DB_AUTOMIGRATE: "true"       # migrate on every start (the official image's opt-in)
+      # Admin password; leave unset and the first migration prints a random one in the log.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      DEFAULT_LANG: en
+      DEFAULT_TIMEZONE: UTC
+      BASE_CURRENCY: EUR           # cannot be changed later
+      INSTANCE_NAME: Part-DB
+      DEFAULT_URI: ${DEFAULT_URI:-http://localhost:8080/}
+      # APP_SECRET: generated once into the var/db volume when unset
+      # TRUSTED_PROXIES: 127.0.0.0/8
+      # TRUSTED_HOSTS: ^(part-db\.example\.invalid)$
+    volumes:
+      - uploads:/var/www/html/uploads
+      - media:/var/www/html/public/media
+      - db:/var/www/html/var/db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: partdb
+      MARIADB_USER: partdb
+      MARIADB_PASSWORD: partdb
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  uploads:
+  media:
+  db:
+  db-data:

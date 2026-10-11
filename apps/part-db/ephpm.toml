@@ -1,0 +1,51 @@
+# ePHPm configuration for Part-DB — external database (MariaDB/MySQL/PostgreSQL).
+#
+# Part-DB reads its configuration from the environment (DATABASE_URL and
+# the other .env keys, the same variables the official jbtronics/part-db1
+# image uses); ePHPm is the web server + PHP runtime. Every key is
+# documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html/public"
+index_files = ["index.php"]
+# Symfony front controller (public/.htaccess: RewriteCond !-f → index.php).
+fallback = ["$uri", "/index.php?$query_string"]
+
+[server.timeouts]
+request = 300                       # label/PDF rendering and large imports
+
+[server.request]
+max_body_size = 314572800           # 300 MiB — the official image's post_max_size
+
+[server.static]
+cache_control = "public, max-age=86400"   # public/build assets are content-hashed
+
+[server.security]
+# The official apache config denies PHP under public/media (an upload
+# volume); .htaccess files are not read here.
+blocked_paths = ["/media/*.php*", "/media/*.phar", "/media/*.phtml", "/.htaccess"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "512M"
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+    ["upload_max_filesize", "256M"],    # the official image's partdb.ini
+    ["post_max_size", "300M"],
+    ["max_input_vars", "8000"],
+    ["date.timezone", "UTC"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container (OPcache timestamp
+# validation is off under `ephpm serve`; reset after changing PHP files).
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

@@ -1,0 +1,34 @@
+# Part-DB on ePHPm — single container, Part-DB's own SQLite database.
+#
+#   ADMIN_PASSWORD=change-me docker compose -f compose.sqlite.yml up -d
+#
+# The official image's default: no database server, var/db/app.db in the db
+# volume (pdo_sqlite is compiled into ePHPm). This is Part-DB's documented
+# small-install option, not ePHPm's experimental embedded engine.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-part-db
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      DATABASE_URL: sqlite:///%kernel.project_dir%/var/db/app.db
+      DATABASE_SQLITE_ENFORCE_FOREIGN_KEYS: "1"   # recommended for new instances
+      APP_ENV: docker
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      DEFAULT_LANG: en
+      DEFAULT_TIMEZONE: UTC
+      BASE_CURRENCY: EUR
+      INSTANCE_NAME: Part-DB
+      DEFAULT_URI: ${DEFAULT_URI:-http://localhost:8080/}
+    volumes:
+      - uploads:/var/www/html/uploads
+      - media:/var/www/html/public/media
+      - db:/var/www/html/var/db
+    restart: unless-stopped
+
+volumes:
+  uploads:
+  media:
+  db:

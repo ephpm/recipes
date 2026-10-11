@@ -1,0 +1,6 @@
+#!/bin/sh
+# Part-DB's Symfony console through the embedded PHP
+# (`docker compose exec ephpm partdb partdb:users:set-password admin`).
+# memory_limit=-1 as php-cli's own default for console work (cache warm-up
+# of a Symfony app needs more than 128M).
+exec ephpm php -d memory_limit=-1 /var/www/html/bin/console "$@"

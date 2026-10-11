@@ -1,0 +1,26 @@
+# RSS-Bridge on ePHPm — one container, no database.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: the rssbridge/rss-bridge image (nginx + php-fpm).
+# Custom bridges/formats, config.ini.php and whitelist.txt go in ./config,
+# exactly as with the official image; settings can also be given as
+# RSSBRIDGE_<section>_<key> environment variables (RSS-Bridge reads them).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-rss-bridge
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # RSSBRIDGE_system_enabled_bridges: "Reddit,Telegram,Youtube"   # default: all
+      # RSSBRIDGE_cache_type: file
+      RSSBRIDGE_system_timezone: UTC
+    volumes:
+      - rss-bridge-config:/config
+    restart: unless-stopped
+
+volumes:
+  rss-bridge-config:

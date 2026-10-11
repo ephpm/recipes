@@ -1,0 +1,49 @@
+# ePHPm configuration for RSS-Bridge (no database).
+#
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app"
+index_files = ["index.php"]
+# Everything goes through index.php?action=…; there are no pretty URLs.
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.request]
+max_body_size = 1048576             # 1 MiB — RSS-Bridge only takes query strings
+
+[server.timeouts]
+request = 60                        # the official nginx config's fastcgi_read_timeout is 45 s
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# The official nginx config denies dotfiles, vendor/ and tests/; the file
+# cache, configuration and code directories are refused here as well
+# (only index.php and static/ are meant to be fetched).
+blocked_paths = [
+    "/cache/*", "/vendor/*", "/tests/*", "/lib/*", "/bridges/*", "/formats/*",
+    "/caches/*", "/actions/*", "/middlewares/*", "/templates/*", "/bin/*",
+    "/config.ini.php", "/config.default.ini.php", "/whitelist.txt", "/DEBUG",
+    "/composer.json", "/composer.lock",
+]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 45
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` can reach the in-process store.
+# Not published outside the container.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

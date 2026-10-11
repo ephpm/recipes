@@ -1,0 +1,45 @@
+# phpMyAdmin on ePHPm, managing a MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in with root / root (MARIADB_ROOT_PASSWORD below)
+#
+# Replaces: Apache + mod_php (the phpmyadmin:apache image).
+# Same variables as the official image: PMA_HOST (default: the `db` service),
+# PMA_PORT, PMA_USER / PMA_PASSWORD (auto-login), PMA_ARBITRARY=1 (connect to
+# any host), PMA_ABSOLUTE_URI, UPLOAD_LIMIT, MAX_EXECUTION_TIME, MEMORY_LIMIT,
+# PMA_PMADB + PMA_CONTROL*, PMA_SSL*, PMA_CONFIG_BASE64, PMA_USER_CONFIG_BASE64.
+# To manage a database elsewhere, drop the `db` service and set PMA_HOST.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-phpmyadmin
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      PMA_HOST: db
+      UPLOAD_LIMIT: 64M
+      # PMA_ARBITRARY: "1"
+      # PMA_USER: root
+      # PMA_PASSWORD: root
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  db-data:

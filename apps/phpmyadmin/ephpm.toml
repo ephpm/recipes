@@ -1,0 +1,59 @@
+# ePHPm configuration for phpMyAdmin.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php", "index.html"]
+# phpMyAdmin is `index.php?route=…` plus static assets; no rewrites needed.
+# Anything else is a 404 rather than a fall-through to index.php.
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.request]
+max_body_size = 67108864            # 64 MiB SQL imports (UPLOAD_LIMIT below must agree)
+
+[server.timeouts]
+# Long imports/exports: keep the hard request deadline above [php]
+# max_execution_time (600) so PHP's own timeout is the one that fires.
+request = 660
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# PHP-only directories and the leftovers of the tarball are never served
+# (the official image serves them through Apache but nothing links to them).
+blocked_paths = ["/libraries/*", "/templates/*", "/vendor/*", "/sql/*", "/tmp/*",
+                 "/config.sample.inc.php", "/show_config_errors.php", "/.git*"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+# Official image defaults: MAX_EXECUTION_TIME=600, MEMORY_LIMIT=512M.
+max_execution_time = 600
+memory_limit = "512M"
+# Written by entrypoint.sh from the environment (UPLOAD_LIMIT, TZ, …), the
+# same knobs the official image turns into php.ini lines.
+ini_file = "/run/ephpm/php.ini"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["allow_url_fopen", "Off"],
+    ["max_input_vars", "10000"],
+    ["session.cookie_httponly", "1"],
+    ["session.use_strict_mode", "1"],
+    # PHP sessions in ePHPm's in-process KV store (the official image uses
+    # a /sessions directory).
+    ["session.save_handler", "ephpm"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

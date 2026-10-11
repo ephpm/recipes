@@ -127,7 +127,7 @@ form_value() {
     printf '%s' "$body" \
         | grep -oE "<input[^>]*name=[\"']${name}[\"'][^>]*>" \
         | sed -nE 's/.*value=["'"'"']([^"'"'"']*)["'"'"'].*/\1/p' \
-        | awk 'NR==1'
+        | awk 'NR==1' || true      # no match prints nothing; never fails the caller under set -e
 }
 
 # run_in SERVICE CMD... — exec inside a compose service

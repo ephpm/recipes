@@ -1,0 +1,45 @@
+# Symfony Demo on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in with jane_admin / kitten (demo fixtures)
+#
+# Replaces: nginx + php-fpm (or the Symfony CLI server / FrankenPHP).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-symfony
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      APP_ENV: prod
+      APP_SECRET: ${APP_SECRET:-change-me-please-32-chars-minimum}
+      DATABASE_URL: "mysql://app:app@db:3306/app?serverVersion=11.8.0-MariaDB&charset=utf8mb4"
+      DEFAULT_URI: http://localhost:${EPHPM_PORT:-8080}
+    volumes:
+      - var:/app/var
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: app
+      MARIADB_USER: app
+      MARIADB_PASSWORD: app
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  var:
+  db-data:

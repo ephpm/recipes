@@ -45,6 +45,10 @@ is untested, and the README says so.
 |---|---|---|---|---|---|
 | [wordpress](apps/wordpress/) | WordPress 7.1 | nginx/apache + fpm, Redis object cache | MariaDB | yes (experimental) | tested 2026-10-11, v0.11.3-php8.5 |
 | [laravel](apps/laravel/) | Laravel 12 skeleton | nginx + fpm, Redis cache/sessions, Octane server (worker variant) | MariaDB | yes (experimental) | tested 2026-10-11, v0.11.3-php8.5 (per-request, worker, embedded) |
+| [symfony](apps/symfony/) | Symfony Demo 2.9 (Symfony 8) | nginx + fpm / Symfony CLI / FrankenPHP | MariaDB | SQLite single container (app-native) | tested 2026-10-11, v0.11.3-php8.5 (MariaDB, SQLite) |
+| [bookstack](apps/bookstack/) | BookStack 26.09 | nginx + fpm (linuxserver image) | MariaDB | no (embedded DB rejects `ADD CONSTRAINT`) | tested 2026-10-11, v0.11.3-php8.5 |
+| [invoiceplane](apps/invoiceplane/) | InvoicePlane 1.7 | nginx + php-fpm containers | MariaDB | no (embedded DB rejects `ALTER TABLE … MODIFY`) | tested 2026-10-11, v0.11.3-php8.5 |
+| [easyappointments](apps/easyappointments/) | Easy!Appointments 1.6 | nginx + php-fpm containers | MariaDB | no (embedded DB rejects `ADD CONSTRAINT`) | tested 2026-10-11, v0.11.3-php8.5 |
 
 ## Running the smoke tests locally
 

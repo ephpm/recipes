@@ -63,7 +63,9 @@ compose() {
 
 compose_up() {
     if [ "${NO_BUILD:-0}" != "1" ]; then
-        compose build --pull "$@"
+        # No --pull: every base image is pinned by tag, and re-pulling on each
+        # build burns through Docker Hub's anonymous pull rate limit.
+        compose build "$@"
     fi
     compose up -d "$@"
 }

@@ -1,0 +1,25 @@
+# Symfony Demo on ePHPm — single container on the app's own SQLite database
+# (Doctrine pdo_sqlite, compiled into ePHPm). Not experimental: this is the
+# demo's default database.
+#
+#   docker compose -f compose.sqlite.yml up -d
+
+services:
+  ephpm:
+    build: .
+    image: recipes-symfony
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      APP_ENV: prod
+      APP_SECRET: ${APP_SECRET:-change-me-please-32-chars-minimum}
+      DATABASE_URL: "sqlite:////app/data/database.sqlite"
+      DEFAULT_URI: http://localhost:${EPHPM_PORT:-8080}
+    volumes:
+      - data:/app/data
+      - var:/app/var
+    restart: unless-stopped
+
+volumes:
+  data:
+  var:

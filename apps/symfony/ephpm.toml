@@ -1,0 +1,37 @@
+# ePHPm configuration for Symfony — per-request mode.
+# Keys: https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app/public"
+index_files = ["index.php"]
+# nginx `try_files $uri /index.php$is_args$args`
+fallback = ["$uri", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 33554432            # 32 MiB
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+blocked_paths = ["/.env*", "/var/*", "/vendor/*", "/config/*"]
+# multi-tenant-only knobs; set explicitly so single-site mode does not warn
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    ["upload_max_filesize", "32M"],
+    ["post_max_size", "32M"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` can refresh OPcache after a
+# deploy and so Symfony's Redis session/cache adapters can use the KV store
+# (session.handler_id: 'redis://127.0.0.1:6379' with predis or the redis ext).
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

@@ -1,0 +1,42 @@
+# ePHPm configuration for Laravel — single container, embedded database.
+#
+# EXPERIMENTAL. ePHPm's embedded SQLite-compatible engine (Turso, Beta
+# upstream) answers on the MySQL wire protocol at 127.0.0.1:3306, so Laravel
+# keeps DB_CONNECTION=mysql with its stock pdo_mysql driver. Cache and
+# sessions go to the in-process KV store through the RESP listener (predis).
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app/public"
+index_files = ["index.php"]
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 33554432
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+blocked_paths = ["/.env", "/storage/*", "/vendor/*"]
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    ["upload_max_filesize", "32M"],
+    ["post_max_size", "32M"],
+]
+
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"
+
+[db.sqlite]
+path = "/var/lib/ephpm/laravel.db"
+
+[db.sqlite.proxy]
+mysql_listen = "127.0.0.1:3306"

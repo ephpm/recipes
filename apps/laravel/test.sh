@@ -37,9 +37,18 @@ run_variant() {
     run_in ephpm ephpm php artisan tinker --execute \
         'App\Models\User::create(["name"=>"Recipe","email"=>"recipe@example.com","password"=>bcrypt("secret")]); echo App\Models\User::count();' \
         | grep -E '^1' >/dev/null || { echo "!!! Eloquent insert failed"; return 1; }
-    copy_in ephpm "$DIR/probe/recipe-probe.php" /app/public/recipe-probe.php
-    expect_body "$BASE/recipe-probe.php" "recipe@example.com"
-    run_in ephpm rm -f /app/public/recipe-probe.php
+    if [ "$1" = "compose.worker.yml" ]; then
+        # Worker mode routes every non-static request through the booted
+        # application, so a stray PHP file in public/ is not executed; read
+        # the record back through the framework instead.
+        run_in ephpm ephpm php artisan tinker --execute 'echo App\Models\User::first()->email;' \
+            | grep 'recipe@example.com' >/dev/null || { echo "!!! read-back failed"; return 1; }
+        echo "==> record read back through the framework"
+    else
+        copy_in ephpm "$DIR/probe/recipe-probe.php" /app/public/recipe-probe.php
+        expect_body "$BASE/recipe-probe.php" "recipe@example.com"
+        run_in ephpm rm -f /app/public/recipe-probe.php
+    fi
 
     compose down -v --remove-orphans
 }

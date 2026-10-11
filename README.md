@@ -44,6 +44,7 @@ is untested, and the README says so.
 | Recipe | App | Replaces | Default DB | Embedded variant | Status |
 |---|---|---|---|---|---|
 | [wordpress](apps/wordpress/) | WordPress 7.1 | nginx/apache + fpm, Redis object cache | MariaDB | yes (experimental) | tested 2026-10-11, v0.11.3-php8.5 |
+| [laravel](apps/laravel/) | Laravel 12 skeleton | nginx + fpm, Redis cache/sessions, Octane server (worker variant) | MariaDB | yes (experimental) | tested 2026-10-11, v0.11.3-php8.5 (per-request, worker, embedded) |
 
 ## Running the smoke tests locally
 

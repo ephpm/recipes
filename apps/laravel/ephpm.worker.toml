@@ -1,0 +1,33 @@
+# ePHPm configuration for Laravel — persistent worker mode (Octane driver).
+#
+# Boots the Laravel application once per worker thread and loops over
+# requests, the way Octane does on Swoole/RoadRunner — but ePHPm supervises
+# the workers itself; `php artisan octane:start` is never run.
+# See https://ephpm.dev/guides/laravel-octane/
+
+[server]
+listen = "0.0.0.0:8080"
+# The PROJECT ROOT, not public/: [php.worker] script must live under it.
+document_root = "/app"
+index_files = ["index.php"]
+
+[server.request]
+max_body_size = 33554432
+
+[server.security]
+blocked_paths = ["/.env", "/storage/*", "/vendor/*", "/app/*", "/config/*", "/database/*", "/routes/*", "/bootstrap/*"]
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+mode = "worker"
+memory_limit = "256M"
+
+[php.worker]
+script = "vendor/bin/ephpm-octane-worker"
+max_requests = 10000
+
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

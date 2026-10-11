@@ -1,0 +1,37 @@
+# Laravel on ePHPm — single container, embedded database + KV. EXPERIMENTAL.
+#
+#   docker compose -f compose.embedded.yml up -d
+#
+# No MariaDB, no Redis: the embedded SQLite-compatible engine (Turso, Beta)
+# serves MySQL wire protocol on 127.0.0.1:3306 and the in-process KV store
+# serves RESP on 127.0.0.1:6379, both inside the container.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-laravel
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      EPHPM_CONFIG: /etc/ephpm/ephpm.embedded.toml
+      APP_URL: http://localhost:${EPHPM_PORT:-8080}
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: ""
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      REDIS_CLIENT: predis
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      QUEUE_CONNECTION: database
+    volumes:
+      - storage:/app/storage
+      - ephpm-data:/var/lib/ephpm
+    restart: unless-stopped
+
+volumes:
+  storage:
+  ephpm-data:

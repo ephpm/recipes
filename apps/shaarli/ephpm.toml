@@ -39,6 +39,10 @@ multi_tenant_hardening = false
 max_execution_time = 60
 memory_limit = "128M"
 ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
     ["upload_max_filesize", "10M"],
     ["post_max_size", "10M"],
     # PHP sessions in ePHPm's in-process KV store instead of files in /tmp.

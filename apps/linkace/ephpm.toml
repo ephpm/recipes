@@ -26,6 +26,10 @@ cache_control = "public, max-age=86400"
 max_execution_time = 120
 memory_limit = "256M"
 ini_overrides = [
+    # v0.11.3 still inherits PHP's compiled-in display_errors=1 under `ephpm serve`;
+    # keep warnings out of responses and in the container log
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
     ["upload_max_filesize", "20M"],
     ["post_max_size", "20M"],
     # same as the official image's php.ini: keep deprecation notices out of the log

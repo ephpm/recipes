@@ -23,6 +23,10 @@ cache_control = "public, max-age=86400"
 max_execution_time = 300            # the official image sets PHP_MAX_EXECUTION_TIME=300 (reports, imports)
 memory_limit = "512M"
 ini_overrides = [
+    # v0.11.3 still inherits PHP's compiled-in display_errors=1 under `ephpm serve`;
+    # keep warnings out of responses and in the container log
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
     ["upload_max_filesize", "64M"],
     ["post_max_size", "64M"],
 ]

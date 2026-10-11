@@ -1,0 +1,28 @@
+# CodeIgniter 4 on ePHPm — single container, embedded database. EXPERIMENTAL.
+#
+#   docker compose -f compose.embedded.yml up -d
+
+services:
+  ephpm:
+    build: .
+    image: recipes-codeigniter4
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      EPHPM_CONFIG: /etc/ephpm/ephpm.embedded.toml
+      CI_ENVIRONMENT: production
+      app_baseURL: http://localhost:${EPHPM_PORT:-8080}/
+      database_default_DBDriver: MySQLi
+      database_default_hostname: 127.0.0.1
+      database_default_port: 3306
+      database_default_database: ci4
+      database_default_username: root
+      database_default_password: ""
+    volumes:
+      - writable:/app/writable
+      - ephpm-data:/var/lib/ephpm
+    restart: unless-stopped
+
+volumes:
+  writable:
+  ephpm-data:

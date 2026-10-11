@@ -1,0 +1,48 @@
+# CodeIgniter 4 on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: apache/nginx + php-fpm (and `php spark serve`).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-codeigniter4
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      CI_ENVIRONMENT: production
+      app_baseURL: http://localhost:${EPHPM_PORT:-8080}/
+      database_default_DBDriver: MySQLi
+      database_default_hostname: db
+      database_default_port: 3306
+      database_default_database: ci4
+      database_default_username: ci4
+      database_default_password: ci4
+    volumes:
+      - writable:/app/writable
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: ci4
+      MARIADB_USER: ci4
+      MARIADB_PASSWORD: ci4
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  writable:
+  db-data:

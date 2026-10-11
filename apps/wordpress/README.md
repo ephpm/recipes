@@ -91,9 +91,11 @@ previews and small sites; plugins that rely on MySQL-only SQL may misbehave.
 
 ## Known limitations
 
-* `imagick` is not available in the ePHPm build; WordPress falls back to GD
-  (which is compiled in), so image editing works but without ImageMagick's
-  extra formats.
+* **Image thumbnails for JPEG/WebP are not generated.** `imagick` is not
+  available in the ePHPm build, and its bundled GD has no JPEG, WebP or AVIF
+  support (`gd_info()` on v0.11.3: PNG/GIF/BMP only, no FreeType). Uploads
+  succeed, but WordPress cannot create the resized sizes for JPEG/WebP files
+  and serves the original. Tracked in the repo's `ISSUES.md`.
 * The embedded-database variant is experimental: the Turso engine is Beta
   upstream, and WordPress plugins that use MySQL-specific SQL may fail.
 * `WP_DEBUG_LOG` goes to the container's stderr (`docker compose logs ephpm`).

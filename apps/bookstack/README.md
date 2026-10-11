@@ -96,3 +96,7 @@ docker compose logs ephpm                                               # PHP er
 * `ext-ldap` is not in the ePHPm build, so `AUTH_METHOD=ldap` is not
   available. SAML2, OpenID Connect and the social logins are pure PHP and
   unaffected (untested here).
+* **ePHPm's GD build has no JPEG/WebP/AVIF support** (PNG/GIF/BMP only —
+  `issues/koel.md`). BookStack resizes uploaded images with
+  intervention/image on the GD driver, so JPEG and WebP uploads cannot be
+  thumbnailed; PNG and GIF work. `test.sh` uploads no image.

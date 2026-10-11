@@ -101,9 +101,13 @@ expect_status() {
 # expect_body URL grep-pattern [curl args...]
 expect_body() {
     local url="$1" pat="$2"; shift 2
-    if ! curl -s --max-time 30 "$@" "$url" | grep -qE -- "$pat"; then
+    # Body captured first: `curl | grep -q` under pipefail fails spuriously
+    # when grep exits on the first match before curl has written everything.
+    local body
+    body="$(curl -s --max-time 30 "$@" "$url" || true)"
+    if ! printf '%s' "$body" | grep -qE -- "$pat"; then
         echo "!!! $url body does not match /$pat/" >&2
-        curl -s --max-time 30 "$@" "$url" | head -c 2000 >&2 || true
+        printf '%s' "$body" | head -c 2000 >&2 || true
         compose logs --tail=80 >&2 || true
         return 1
     fi
@@ -114,6 +118,11 @@ expect_body() {
 run_in() {
     local svc="$1"; shift
     compose exec -T "$svc" "$@"
+}
+
+# copy_in SERVICE LOCAL-FILE CONTAINER-PATH — copy a file into a service
+copy_in() {
+    compose cp "$(compose_path "$2")" "$1:$3"
 }
 
 recipe_done() {

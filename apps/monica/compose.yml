@@ -1,0 +1,77 @@
+# Monica v4 on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   register the first account on the first visit
+#
+# Replaces: the monica:4-apache image and its cron sidecar.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-monica
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: &env
+      # Monica forces https:// on every generated URL when APP_ENV=production
+      # (it assumes a TLS proxy in front). Keep `local` for plain-HTTP use;
+      # set APP_ENV=production once you serve it over HTTPS.
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: "false"
+      # The URL users open Monica at (links, emails, OAuth redirects).
+      APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: monica
+      DB_USERNAME: monica
+      DB_PASSWORD: monica
+      # The first account can always register; set to "true" afterwards to
+      # close signups (Monica's own default).
+      APP_DISABLE_SIGNUP: "false"
+      MAIL_MAILER: log
+      # Cache uses Monica's `database` driver and sessions `file` by default.
+      # To keep both in ePHPm's in-process KV store instead, uncomment:
+      # CACHE_DRIVER: redis
+      # SESSION_DRIVER: redis
+      # REDIS_CLIENT: predis
+      # REDIS_HOST: 127.0.0.1
+    volumes:
+      - monica-storage:/app/storage   # uploads, logs, Passport keys, .env (APP_KEY, HASH_SALT)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Monica's reminders, notifications and clean-ups run through the Laravel
+  # scheduler; the official stack runs a cron sidecar calling schedule:run
+  # every minute.
+  scheduler:
+    image: recipes-monica
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    environment: *env
+    volumes:
+      - monica-storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: monica
+      MARIADB_USER: monica
+      MARIADB_PASSWORD: monica
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  monica-storage:
+  db-data:

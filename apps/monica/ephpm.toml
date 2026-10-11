@@ -1,0 +1,41 @@
+# ePHPm configuration for Monica v4 (MySQL/MariaDB database).
+#
+# Monica (Laravel 9) connects to DB_HOST with pdo_mysql; ePHPm is the web
+# server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Laravel's web root is public/; the application code sits above it.
+document_root = "/app/public"
+index_files = ["index.php"]
+# nginx try_files equivalent (Monica's nginx_app.conf rewrites every
+# non-file URL to the front controller the same way).
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 67108864            # 64 MiB — photo/document uploads (DEFAULT_MAX_UPLOAD_SIZE is 10 MB by default)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[php]
+max_execution_time = 120            # imports (vCard) and the first monica:update
+memory_limit = "512M"
+ini_overrides = [
+    # v0.11.3 still inherits PHP's compiled-in display_errors=1 under `ephpm serve`;
+    # keep warnings out of responses and in the container log
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "64M"],
+    ["post_max_size", "64M"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (OPcache refresh after an
+# upgrade) and `ephpm kv ...` can reach the in-process store. Not published
+# outside the container. With CACHE_DRIVER=redis / SESSION_DRIVER=redis,
+# REDIS_CLIENT=predis and REDIS_HOST=127.0.0.1 Monica uses it instead of a
+# Redis service.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

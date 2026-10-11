@@ -42,6 +42,9 @@ COPY --from=src /src /app
 COPY env.template /usr/local/share/linkace/env.template
 COPY ephpm.toml /etc/ephpm/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+# `php` on PATH: Laravel's scheduler and tools that re-invoke PHP look for
+# a `php` binary (PHP_BINARY is `ephpm` here), so give them `ephpm php`.
+RUN printf '#!/bin/sh\nexec ephpm php "$@"\n' > /usr/local/bin/php && chmod +x /usr/local/bin/php
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && mkdir -p /var/lib/ephpm \
     # pristine copy of storage/, used by entrypoint.sh to seed an empty volume

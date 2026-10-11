@@ -56,4 +56,6 @@ echo "==> bin/phpbbcli.php ran on the embedded PHP"
 expect_status "$BASE/config.php" 403
 expect_status "$BASE/phpbb/db/driver/mysqli.php" 403
 expect_status "$BASE/install/app.php" 403
+# the base image's E2E fixtures (issues/joomla.md) were removed in the Dockerfile
+[ "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/info.php")" != 200 ] || { echo "!!! the base image's info.php fixture is served" >&2; exit 1; }
 rm -f "$jar"

@@ -43,6 +43,7 @@ run_variant() {
     # 4. nothing outside public_html/ is reachable
     expect_status "$BASE/config/config.inc.php" 404
     expect_status "$BASE/program/include/rcmail.php" 404
+    expect_status "$BASE/info.php" 404       # the base image's E2E fixtures are gone (issues/joomla.md)
     rm -f "$jar"
     compose down -v --remove-orphans
 }

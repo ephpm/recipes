@@ -1,0 +1,56 @@
+# ePHPm configuration for Joomla.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php", "index.html"]
+# htaccess.txt: anything that is not a file or directory → index.php (SEF
+# URLs with "Use URL Rewriting" on). The /api/ rule (→ api/index.php) has no
+# equivalent — see the README.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 67108864            # 64 MiB: extension packages and media uploads
+
+[server.static]
+cache_control = "public, max-age=604800"
+
+[server.response]
+headers = [["X-Content-Type-Options", "nosniff"]]
+
+[server.security]
+# Never useful over HTTP; Apache serves them unless .htaccess-protected.
+blocked_paths = ["/configuration.php", "/htaccess.txt", "/administrator/logs/*", "/logs/*",
+                 "/tmp/*", "/cache/*", "/administrator/cache/*", "/installation/*", "/.git*"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+# Joomla rewrites its own PHP at runtime: configuration.php when Global
+# Configuration is saved, and extension/core updates from the administrator.
+# `ephpm serve` turns OPcache timestamp checks off by default, which would
+# keep serving the old configuration.php — so turn them back on, at PHP's
+# stock 2-second interval.
+opcache_validate_timestamps = true
+opcache_revalidate_freq = 2
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "64M"],
+    ["post_max_size", "64M"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (after installing or
+# updating extensions — OPcache runs without timestamp checks) and
+# `ephpm kv ...` work inside the container. Not published.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

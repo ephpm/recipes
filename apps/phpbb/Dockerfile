@@ -28,6 +28,9 @@ RUN mkdir -p /tmp/phpbb \
 # ── Stage 2: the runtime image ───────────────────────────────────────────────
 FROM docker.io/ephpm/ephpm:${EPHPM_TAG}
 
+# The base image ships ePHPm's own test fixtures in /var/www/html (phpinfo()
+# among them, see issues/joomla.md); start from an empty directory.
+RUN rm -rf /var/www/html
 COPY --from=src /src /var/www/html
 COPY php /usr/local/bin/php
 COPY ephpm.toml /etc/ephpm/ephpm.toml

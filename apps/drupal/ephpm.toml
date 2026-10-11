@@ -1,0 +1,52 @@
+# ePHPm configuration for Drupal.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# drupal/recommended-project's web root; vendor/ and the rest of the
+# project sit above it, out of reach.
+document_root = "/opt/drupal/web"
+index_files = ["index.php"]
+# web/.htaccess: anything that is not a file or directory → index.php
+# (clean URLs, and image-style derivatives under sites/default/files/styles).
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 67108864            # 64 MiB uploads
+
+[server.static]
+cache_control = "public, max-age=1209600"   # web/.htaccess: ExpiresDefault A1209600
+
+[server.response]
+headers = [["X-Content-Type-Options", "nosniff"]]
+
+[server.security]
+# What web/.htaccess denies that matters: the settings files, the scaffold's
+# text files, update/install/cron entry points stay reachable as in Apache.
+blocked_paths = ["/sites/*/settings*.php", "/sites/*/*.yml", "/sites/*.php", "/sites/*.yml", "/sites/*/files/private/*",
+                 "/web.config", "/INSTALL.txt", "/README.md", "/example.gitignore", "/.git*",
+                 "/sites/*/files/php/*"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "64M"],
+    ["post_max_size", "64M"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (after composer updates or
+# code changes — OPcache does not check timestamps under `ephpm serve`) and
+# `ephpm kv ...` work inside the container. Not published.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

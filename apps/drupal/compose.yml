@@ -1,0 +1,56 @@
+# Drupal on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in at /user/login with DRUPAL_ADMIN_USER / DRUPAL_ADMIN_PASSWORD
+#
+# Replaces: the official `drupal` image (Apache + mod_php). With
+# DRUPAL_ADMIN_PASSWORD set the site is installed with Drush on the first
+# start; leave it empty to use the web installer (/core/install.php) instead.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-drupal
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      DRUPAL_DB_DRIVER: mysql
+      DRUPAL_DB_HOST: db
+      DRUPAL_DB_PORT: "3306"
+      DRUPAL_DB_NAME: drupal
+      DRUPAL_DB_USER: drupal
+      DRUPAL_DB_PASSWORD: ${DRUPAL_DB_PASSWORD:-drupal-db-password}
+      DRUPAL_SITE_NAME: ${DRUPAL_SITE_NAME:-Drupal on ePHPm}
+      DRUPAL_ADMIN_USER: ${DRUPAL_ADMIN_USER:-admin}
+      DRUPAL_ADMIN_PASSWORD: ${DRUPAL_ADMIN_PASSWORD:-drupal-admin-password}
+      DRUPAL_ADMIN_MAIL: ${DRUPAL_ADMIN_MAIL:-admin@example.com}
+      # DRUPAL_PROFILE: standard      # or minimal, demo_umami, ...
+    volumes:
+      - sites:/opt/drupal/web/sites     # settings.php and public files
+      - private:/opt/drupal/private     # private files (outside the web root)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: drupal
+      MARIADB_USER: drupal
+      MARIADB_PASSWORD: ${DRUPAL_DB_PASSWORD:-drupal-db-password}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-drupal-root-password}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  sites:
+  private:
+  db-data:

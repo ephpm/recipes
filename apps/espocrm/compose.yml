@@ -1,0 +1,70 @@
+# EspoCRM on ePHPm + MariaDB (+ the scheduler).
+#
+#   ESPOCRM_ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080      (admin / change-me)
+#
+# Replaces: the official espocrm/espocrm (+ espocrm-daemon) images and their
+# docker-compose example.
+
+x-espocrm: &espocrm
+  build: .
+  image: recipes-espocrm
+  environment:
+    # Same variable names as espocrm/espocrm.
+    ESPOCRM_DATABASE_PLATFORM: Mysql
+    ESPOCRM_DATABASE_HOST: db
+    ESPOCRM_DATABASE_NAME: espocrm
+    ESPOCRM_DATABASE_USER: espocrm
+    ESPOCRM_DATABASE_PASSWORD: espocrm
+    ESPOCRM_ADMIN_USERNAME: ${ESPOCRM_ADMIN_USERNAME:-admin}
+    ESPOCRM_ADMIN_PASSWORD: ${ESPOCRM_ADMIN_PASSWORD:-password}
+    ESPOCRM_SITE_URL: ${ESPOCRM_SITE_URL:-http://localhost:8080}
+    ESPOCRM_LANGUAGE: en_US
+    # ESPOCRM_TIME_ZONE: UTC
+    # ESPOCRM_CONFIG_<KEY>: any config.php key, e.g. ESPOCRM_CONFIG_OUTBOUND_EMAIL_FROM_ADDRESS
+  volumes:
+    - data:/var/www/html/data
+    - custom:/var/www/html/custom
+    - client-custom:/var/www/html/client/custom
+
+services:
+  ephpm:
+    <<: *espocrm
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Scheduled jobs: the documented crontab (`cron.php` every minute). The
+  # official image runs a forking daemon instead; see the README.
+  cron:
+    <<: *espocrm
+    command: ["sh", "-c", "while true; do ephpm php /var/www/html/cron.php; sleep 60; done"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: espocrm
+      MARIADB_USER: espocrm
+      MARIADB_PASSWORD: espocrm
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  data:
+  custom:
+  client-custom:
+  db-data:

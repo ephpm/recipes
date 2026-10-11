@@ -1,0 +1,59 @@
+# ePHPm configuration for EspoCRM — external database (MariaDB/MySQL/PostgreSQL).
+#
+# EspoCRM keeps its configuration in data/config.php (written by the
+# entrypoint from the ESPOCRM_* variables); ePHPm is the web server + PHP
+# runtime. Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"       # the Apache layout: app root, rewritten into public/
+index_files = ["ephpm-front.php"]
+# Static files (client/*) are served from the app root; everything else goes
+# to the recipe's front controller, which dispatches /api/v1/* and /portal/*
+# to EspoCRM's own entry points under public/ (what the root and
+# per-directory .htaccess files do under Apache).
+fallback = ["$uri", "/ephpm-front.php?$query_string"]
+
+[server.timeouts]
+request = 300                       # the documented fastcgi_read_timeout 300 (imports, mass actions)
+
+[server.request]
+max_body_size = 52428800            # 50 MiB — the documented client_max_body_size
+
+[server.static]
+cache_control = "public, max-age=604800"   # client assets carry a cache-busting query string
+
+[server.security]
+# What EspoCRM's root .htaccess forbids (data, application, custom, vendor,
+# direct access to public/), plus the root-level scripts that are CLI-only.
+blocked_paths = [
+    "/data/*", "/application/*", "/custom/*", "/vendor/*", "/public/*",
+    "/html/*", "/index.php", "/bootstrap.php", "/command.php", "/cron.php",
+    "/daemon.php", "/rebuild.php", "/clear_cache.php", "/upgrade.php",
+    "/extension.php", "/websocket.php", "/preload.php", "/web.config", "/*.htaccess",
+]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 180            # the official image's espocrm.ini
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+    ["error_reporting", "E_ALL & ~E_NOTICE & ~E_DEPRECATED"],   # the official espocrm.ini
+    ["max_input_time", "180"],
+    ["upload_max_filesize", "50M"],
+    ["post_max_size", "50M"],
+    ["date.timezone", "UTC"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container (OPcache timestamp
+# validation is off under `ephpm serve`; reset after installing an extension).
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

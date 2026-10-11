@@ -1,0 +1,72 @@
+# Firefly III on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   register the first (admin) user on the first visit
+#
+# Replaces: the fireflyiii/core image (nginx + php-fpm). The cron sidecar is
+# the same alpine+crond pattern as the official docker-compose.yml.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-firefly-iii
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: &env
+      # The URL users open Firefly III at (used in emails and redirects).
+      APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      SITE_OWNER: mail@example.com
+      TZ: UTC
+      # ** = trust the immediate upstream (the official Docker default)
+      TRUSTED_PROXIES: "**"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: firefly
+      DB_USERNAME: firefly
+      DB_PASSWORD: secret_firefly_password
+      # The cron sidecar below calls /api/v1/cron/<this token> once a day.
+      # Exactly 32 characters; change it.
+      STATIC_CRON_TOKEN: ${STATIC_CRON_TOKEN:-ephpmrecipechangeme0123456789abc}
+      # Cache and sessions default to the `file` driver (storage/framework).
+      # To keep them in ePHPm's in-process KV store instead, uncomment:
+      # CACHE_STORE: redis
+      # SESSION_DRIVER: redis
+      # REDIS_HOST: 127.0.0.1
+    volumes:
+      - firefly-storage:/app/storage      # uploads, logs, Passport keys, .env (APP_KEY)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: firefly
+      MARIADB_USER: firefly
+      MARIADB_PASSWORD: secret_firefly_password
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  # Daily cron (recurring transactions, bill auto-matching, exchange rates):
+  # Firefly III's own compose file runs exactly this.
+  cron:
+    image: docker.io/library/alpine:3.20
+    environment: *env
+    command: ["sh", "-c", "echo \"0 3 * * * wget -qO- http://ephpm:8080/api/v1/cron/$$STATIC_CRON_TOKEN; echo\" | crontab - && crond -f -L /dev/stdout"]
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+volumes:
+  firefly-storage:
+  db-data:

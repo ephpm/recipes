@@ -1,0 +1,71 @@
+# Moodle on ePHPm + PostgreSQL.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT=8090 changes the port and the
+#                                 default MOODLE_WWWROOT together; browse to
+#                                 exactly the host in MOODLE_WWWROOT)
+#   log in with MOODLE_ADMIN_USER / MOODLE_ADMIN_PASSWORD
+#
+# Replaces: Apache/nginx + php-fpm + a cron job. The first start installs the
+# database (a few minutes); the `cron` service runs admin/cli/cron.php every
+# minute, as Moodle requires.
+
+x-moodle-env: &moodle-env
+  # The public URL. With an explicit port the server listens on that same
+  # port inside the container (see entrypoint.sh), so publish it 1:1 below.
+  MOODLE_WWWROOT: ${MOODLE_WWWROOT:-http://localhost:${EPHPM_PORT:-8080}}
+  MOODLE_DBTYPE: pgsql
+  MOODLE_DBHOST: db
+  MOODLE_DBNAME: moodle
+  MOODLE_DBUSER: moodle
+  MOODLE_DBPASS: ${MOODLE_DBPASS:-moodle-db-password}
+  # MOODLE_SSLPROXY: "true"        # behind a TLS-terminating proxy (https wwwroot)
+
+services:
+  ephpm:
+    build: .
+    image: recipes-moodle
+    ports:
+      - "${EPHPM_PORT:-8080}:${EPHPM_PORT:-8080}"
+    environment:
+      <<: *moodle-env
+      MOODLE_ADMIN_USER: ${MOODLE_ADMIN_USER:-admin}
+      MOODLE_ADMIN_PASSWORD: ${MOODLE_ADMIN_PASSWORD:-Moodle-Admin-Pass-1}
+      MOODLE_ADMIN_EMAIL: ${MOODLE_ADMIN_EMAIL:-admin@example.com}
+      MOODLE_SITE_FULLNAME: ${MOODLE_SITE_FULLNAME:-Moodle on ePHPm}
+      MOODLE_SITE_SHORTNAME: ${MOODLE_SITE_SHORTNAME:-moodle}
+    volumes:
+      - moodledata:/var/moodledata
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  cron:
+    image: recipes-moodle
+    command: ["cron"]
+    environment: *moodle-env
+    volumes:
+      - moodledata:/var/moodledata
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/postgres:17
+    environment:
+      POSTGRES_DB: moodle
+      POSTGRES_USER: moodle
+      POSTGRES_PASSWORD: ${MOODLE_DBPASS:-moodle-db-password}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moodle -d moodle"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  moodledata:
+  db-data:

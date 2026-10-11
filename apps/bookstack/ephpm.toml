@@ -1,0 +1,36 @@
+# ePHPm configuration for BookStack (MySQL/MariaDB database).
+#
+# BookStack (Laravel 12) connects to DB_HOST with pdo_mysql; ePHPm is the
+# web server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Laravel's web root is public/; the application code sits above it.
+document_root = "/app/public"
+index_files = ["index.php"]
+# nginx try_files equivalent: anything that is not a file under public/
+# goes to the front controller.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 104857600           # 100 MiB — the official image's upload ceiling (FILE_UPLOAD_SIZE_LIMIT is 50 MB by default)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[php]
+max_execution_time = 120            # PDF exports and large imports
+memory_limit = "512M"               # the upstream dev image raises it to 512M for exports
+ini_overrides = [
+    ["upload_max_filesize", "100M"],
+    ["post_max_size", "100M"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (OPcache refresh after an
+# upgrade) and `ephpm kv ...` can reach the in-process store. Not published
+# outside the container. With CACHE_DRIVER=redis / SESSION_DRIVER=redis and
+# REDIS_SERVERS=127.0.0.1:6379:0 BookStack uses it instead of a Redis service.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

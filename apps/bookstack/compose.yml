@@ -1,0 +1,57 @@
+# BookStack on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in as admin@admin.com / password and change it
+#
+# Replaces: the linuxserver/bookstack image (nginx + php-fpm + s6) and a
+# Redis service for cache/sessions.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-bookstack
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # BookStack builds every link from APP_URL: set it to the address you
+      # open it at (behind a proxy: the public https URL).
+      APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: bookstack
+      DB_USERNAME: bookstack
+      DB_PASSWORD: bookstack
+      # Cache and sessions default to the `file` driver (storage/framework).
+      # To keep them in ePHPm's in-process KV store instead, uncomment:
+      # CACHE_DRIVER: redis
+      # SESSION_DRIVER: redis
+      # REDIS_SERVERS: 127.0.0.1:6379:0
+    volumes:
+      - bookstack-storage:/app/storage        # attachments, logs, .env (APP_KEY)
+      - bookstack-uploads:/app/public/uploads # images
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: bookstack
+      MARIADB_USER: bookstack
+      MARIADB_PASSWORD: bookstack
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  bookstack-storage:
+  bookstack-uploads:
+  db-data:

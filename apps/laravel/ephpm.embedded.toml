@@ -27,6 +27,8 @@ multi_tenant_hardening = false
 max_execution_time = 60
 memory_limit = "256M"
 ini_overrides = [
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
     ["upload_max_filesize", "32M"],
     ["post_max_size", "32M"],
 ]

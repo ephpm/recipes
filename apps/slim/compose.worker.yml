@@ -1,0 +1,14 @@
+# Slim 4 skeleton on ePHPm — persistent worker mode (ephpm/psr15-worker).
+#
+#   docker compose -f compose.worker.yml up -d
+
+services:
+  ephpm:
+    build: .
+    image: recipes-slim
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      EPHPM_CONFIG: /etc/ephpm/ephpm.worker.toml
+      EPHPM_WORKER_BOOTSTRAP: /app/worker-bootstrap.php
+    restart: unless-stopped

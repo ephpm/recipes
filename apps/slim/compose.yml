@@ -1,0 +1,14 @@
+# Slim 4 skeleton on ePHPm — per-request mode, single container (the skeleton
+# has no database).
+#
+#   docker compose up -d
+#   curl http://localhost:8080/            # Hello world!
+#   curl http://localhost:8080/users       # JSON from the in-memory repository
+
+services:
+  ephpm:
+    build: .
+    image: recipes-slim
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    restart: unless-stopped

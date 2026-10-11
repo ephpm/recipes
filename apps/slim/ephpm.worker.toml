@@ -1,0 +1,29 @@
+# ePHPm configuration for Slim 4 — persistent worker mode (PSR-15 adapter).
+#
+# Boots the Slim application once per worker thread (worker-bootstrap.php,
+# via EPHPM_WORKER_BOOTSTRAP) and loops over requests.
+# See https://ephpm.dev/guides/psr15-worker/
+
+[server]
+listen = "0.0.0.0:8080"
+# The PROJECT ROOT: [php.worker] script must live under document_root.
+document_root = "/app"
+
+[server.security]
+blocked_paths = ["/app/*", "/var/*", "/vendor/*", "/logs/*", "/worker-bootstrap.php"]
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+mode = "worker"
+memory_limit = "128M"
+ini_overrides = [["display_errors", "Off"], ["log_errors", "On"]]
+
+[php.worker]
+script = "vendor/bin/ephpm-worker"
+max_requests = 10000
+
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

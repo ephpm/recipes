@@ -24,6 +24,8 @@ multi_tenant_hardening = false
 [php]
 max_execution_time = 60
 memory_limit = "256M"
+# v0.11.3 inherits PHP's display_errors=1 under `serve`; keep notices out of responses.
+ini_overrides = [["display_errors", "Off"], ["log_errors", "On"]]
 
 # Loopback RESP listener: `ephpm cache reset` after deploys, and CI4's Redis
 # cache/session handlers can target 127.0.0.1:6379 with predis.

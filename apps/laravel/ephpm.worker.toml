@@ -23,6 +23,7 @@ multi_tenant_hardening = false
 [php]
 mode = "worker"
 memory_limit = "256M"
+ini_overrides = [["display_errors", "Off"], ["log_errors", "On"]]
 
 [php.worker]
 script = "vendor/bin/ephpm-octane-worker"

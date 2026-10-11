@@ -25,6 +25,8 @@ multi_tenant_hardening = false
 max_execution_time = 60
 memory_limit = "256M"
 ini_overrides = [
+    ["display_errors", "Off"],       # v0.11.3 inherits PHP's display_errors=1 under `serve`
+    ["log_errors", "On"],
     ["upload_max_filesize", "32M"],
     ["post_max_size", "32M"],
 ]

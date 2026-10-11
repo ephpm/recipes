@@ -25,6 +25,7 @@ multi_tenant_hardening = false
 [php]
 max_execution_time = 60
 memory_limit = "256M"
+ini_overrides = [["display_errors", "Off"], ["log_errors", "On"]]
 
 [kv.redis_compat]
 enabled = true

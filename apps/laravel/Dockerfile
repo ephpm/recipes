@@ -25,8 +25,10 @@ WORKDIR /app
 # laravel/octane + ephpm/octane-driver (+ its ephpm/worker base, listed as a
 # separate VCS repo because Composer does not resolve VCS repos transitively):
 # the worker-mode variant. Both are harmless in per-request mode.
-RUN composer config repositories.ephpm-octane vcs https://github.com/ephpm/octane-driver \
-    && composer config repositories.ephpm-worker vcs https://github.com/ephpm/php-worker \
+# Repository type `git` (plain clone), not `vcs` — `vcs` goes through the
+# GitHub API and its anonymous rate limit.
+RUN composer config repositories.ephpm-octane git https://github.com/ephpm/octane-driver.git \
+    && composer config repositories.ephpm-worker git https://github.com/ephpm/php-worker.git \
     && composer config minimum-stability dev && composer config prefer-stable true \
     && composer require --no-interaction --no-scripts --update-no-dev --ignore-platform-reqs \
         predis/predis:^3.0 laravel/octane:^2.0 ephpm/octane-driver:^0.1

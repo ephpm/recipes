@@ -23,16 +23,28 @@ done
 # .env lives in the storage volume and /app/.env points at it, so the APP_KEY
 # generated below survives container recreation. Everything else comes from
 # the container environment, which Laravel never overrides from .env.
-if [ ! -f "$STORAGE/.env" ]; then
-    cp /usr/local/share/snipe-it/env.template "$STORAGE/.env"
-fi
+# Only the server seeds it; a command container (the scheduler) waits for
+# the seed so the two never race on the same file.
+case "${1:-}" in
+    ""|-*)
+        if [ ! -f "$STORAGE/.env" ]; then
+            cp /usr/local/share/snipe-it/env.template "$STORAGE/.env"
+        fi
+        if grep -q '^APP_KEY=ChangeMe' "$STORAGE/.env" && [ -z "${APP_KEY:-}" ]; then
+            key="base64:$(ephpm php -r 'echo base64_encode(random_bytes(32));')"
+            sed -i "s|^APP_KEY=.*|APP_KEY=$key|" "$STORAGE/.env"
+            echo "==> generated APP_KEY into storage/.env"
+        fi
+        ;;
+    *)
+        i=0
+        until [ -f "$STORAGE/.env" ] && ! grep -q '^APP_KEY=ChangeMe' "$STORAGE/.env"; do
+            i=$((i + 1)); [ "$i" -ge 120 ] && { echo "!!! storage/.env was not seeded by the server after 120s" >&2; exit 1; }
+            sleep 1
+        done
+        ;;
+esac
 ln -sfn "$STORAGE/.env" "$APP/.env"
-
-if grep -q '^APP_KEY=ChangeMe' "$STORAGE/.env" && [ -z "${APP_KEY:-}" ]; then
-    key="base64:$(ephpm php -r 'echo base64_encode(random_bytes(32));')"
-    sed -i "s|^APP_KEY=.*|APP_KEY=$key|" "$STORAGE/.env"
-    echo "==> generated APP_KEY into storage/.env"
-fi
 
 # Wait for the database.
 echo "==> waiting for database at ${DB_HOST:-db}:${DB_PORT:-3306}"

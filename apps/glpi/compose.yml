@@ -1,0 +1,62 @@
+# GLPI on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in as glpi / glpi (then change the default accounts' passwords)
+#
+# Replaces: the glpi/glpi image (Apache + mod_php + supervisord running the
+# GLPI cron). Same GLPI_* variables as the official image.
+
+x-glpi-env: &glpi-env
+  GLPI_DB_HOST: db
+  GLPI_DB_PORT: "3306"
+  GLPI_DB_NAME: glpi
+  GLPI_DB_USER: glpi
+  GLPI_DB_PASSWORD: ${GLPI_DB_PASSWORD:-glpi-db-password}
+  # GLPI_SKIP_AUTOINSTALL: "true"   # use the web installer instead
+  # GLPI_SKIP_AUTOUPDATE: "true"    # run bin/console database:update yourself
+
+services:
+  ephpm:
+    build: .
+    image: recipes-glpi
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: *glpi-env
+    volumes:
+      - glpi:/var/glpi               # config, files (documents, sessions, cache), logs, marketplace
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The official image's glpi-cron program: front/cron.php every 60 s.
+  cron:
+    image: recipes-glpi
+    command: ["cron"]
+    environment: *glpi-env
+    volumes:
+      - glpi:/var/glpi
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: glpi
+      MARIADB_USER: glpi
+      MARIADB_PASSWORD: ${GLPI_DB_PASSWORD:-glpi-db-password}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-glpi-root-password}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  glpi:
+  db-data:

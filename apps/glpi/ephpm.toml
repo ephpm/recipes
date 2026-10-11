@@ -1,0 +1,49 @@
+# ePHPm configuration for GLPI (MySQL/MariaDB).
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# GLPI 10.0.7+ requires public/ as the web root: index.php is its router,
+# which also serves the legacy /front/*.php and /ajax/*.php scripts that
+# live outside public/.
+document_root = "/var/www/glpi/public"
+index_files = ["index.php"]
+# The official Apache vhost: RewriteCond !-f → RewriteRule ^(.*)$ index.php
+fallback = ["$uri", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 20971520            # 20 MiB attachments (glpi.ini post_max_size in the official image)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+# The official image's conf.d/glpi.ini, plus display_errors off (v0.11.3
+# still inherits PHP's compiled-in display_errors=1 under `ephpm serve`).
+ini_overrides = [
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["session.cookie_httponly", "On"],
+    ["session.cookie_samesite", "Strict"],
+    ["session.gc_probability", "1"],
+    ["session.gc_divisor", "100"],
+    ["session.gc_maxlifetime", "60480"],
+    ["post_max_size", "20M"],
+    ["upload_max_filesize", "20M"],
+    ["max_input_vars", "5000"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (after installing plugins or
+# upgrading) and `ephpm kv ...` work inside the container. Not published.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

@@ -1,0 +1,76 @@
+# Akaunting on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in with AKAUNTING_ADMIN_EMAIL / AKAUNTING_ADMIN_PASSWORD
+#
+# Replaces: a nginx/apache + php-fpm host (Akaunting has no official image).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-akaunting
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: &env
+      # The URL users open Akaunting at (assets and links are built from it).
+      APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      APP_DEBUG: "false"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: akaunting
+      DB_USERNAME: akaunting
+      DB_PASSWORD: akaunting
+      # First-run installation (artisan install); change the password.
+      AKAUNTING_COMPANY_NAME: My Company
+      AKAUNTING_COMPANY_EMAIL: my@company.com
+      AKAUNTING_ADMIN_EMAIL: admin@example.com
+      AKAUNTING_ADMIN_PASSWORD: Recipe-Pass-9731
+      APP_LOCALE: en-GB
+      MAIL_MAILER: log
+      # Cache and sessions default to the `file` driver (storage/framework).
+      # To keep them in ePHPm's in-process KV store instead, uncomment:
+      # CACHE_DRIVER: redis
+      # SESSION_DRIVER: redis
+      # REDIS_CLIENT: predis
+      # REDIS_HOST: 127.0.0.1
+    volumes:
+      - akaunting-storage:/app/storage   # uploads, logs, .env (APP_KEY, APP_INSTALLED)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Akaunting's recurring invoices, reminders and update checks run through
+  # the Laravel scheduler, which upstream asks you to call every minute.
+  scheduler:
+    image: recipes-akaunting
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    environment: *env
+    volumes:
+      - akaunting-storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: akaunting
+      MARIADB_USER: akaunting
+      MARIADB_PASSWORD: akaunting
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  akaunting-storage:
+  db-data:

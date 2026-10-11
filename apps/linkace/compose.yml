@@ -1,0 +1,69 @@
+# LinkAce on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: the official linkace/linkace image (Caddy + php-fpm + supervisord)
+# and its Redis service. Meilisearch is not needed (APP_SEARCH_DRIVER=database).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-linkace
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: &env
+      # Must match the host you open LinkAce at: its TrustHosts middleware
+      # rejects any other Host header with 400 (or set TRUSTED_HOSTS).
+      APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: linkace
+      DB_USERNAME: linkace
+      DB_PASSWORD: linkace
+      # Cache and sessions default to the `file` driver (storage/framework).
+      # To keep them in ePHPm's in-process KV store instead, uncomment:
+      # CACHE_DRIVER: redis
+      # SESSION_DRIVER: redis
+      # REDIS_HOST: 127.0.0.1
+    volumes:
+      - linkace-storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # LinkAce's queue (link checks, imports, Wayback backups) is driven by the
+  # Laravel scheduler, which upstream asks you to run every minute. Same
+  # image, same volume, same database.
+  scheduler:
+    image: recipes-linkace
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    environment: *env
+    volumes:
+      - linkace-storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: linkace
+      MARIADB_USER: linkace
+      MARIADB_PASSWORD: linkace
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  linkace-storage:
+  db-data:

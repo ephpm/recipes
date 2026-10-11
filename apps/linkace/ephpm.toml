@@ -1,0 +1,41 @@
+# ePHPm configuration for LinkAce (MySQL/MariaDB database).
+#
+# LinkAce (Laravel 11) connects to DB_HOST with pdo_mysql; ePHPm is the web
+# server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Laravel's web root is public/; the application code sits above it.
+document_root = "/app/public"
+index_files = ["index.php"]
+# The equivalent of Caddy's php_fastcgi / nginx try_files: anything that is
+# not a real file under public/ goes to the front controller.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 20971520            # 20 MiB — bookmark imports (matches the official php.ini's 20M)
+
+[server.static]
+# Vite assets in /build are content-hashed, the rest (favicons, manifest)
+# changes only with a new release.
+cache_control = "public, max-age=86400"
+
+[php]
+# The setup wizard runs all migrations inside one HTTP request.
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [
+    ["upload_max_filesize", "20M"],
+    ["post_max_size", "20M"],
+    # same as the official image's php.ini: keep deprecation notices out of the log
+    ["error_reporting", "E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (OPcache refresh after an
+# upgrade) and `ephpm kv ...` can reach the in-process store. Not published
+# outside the container. With CACHE_DRIVER=redis / SESSION_DRIVER=redis and
+# REDIS_HOST=127.0.0.1 LinkAce uses it instead of a Redis service.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

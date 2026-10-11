@@ -1,0 +1,65 @@
+# OJS on ePHPm + MariaDB (+ the scheduled-tasks runner).
+#
+#   docker compose up -d
+#   open http://localhost:8080        # the web installer runs on first visit
+#
+# Replaces: the official pkp/ojs image (php-apache + cron) and its compose.
+
+x-ojs: &ojs
+  build: .
+  image: recipes-ojs
+  environment:
+    # Same variable names as pkp/containers.
+    PKP_DB_DRIVER: mysqli
+    PKP_DB_HOST: db
+    PKP_DB_NAME: pkp
+    PKP_DB_USER: pkp
+    PKP_DB_PASSWORD: changeMePlease
+    PKP_BASE_URL: ${PKP_BASE_URL:-http://localhost:8080}
+    # PKP_ALLOWED_HOSTS: '["journal.example.com"]'   # OJS's allowed_hosts (JSON list)
+    # PKP_RESTFUL_URLS: "On"                          # URLs without /index.php
+  volumes:
+    - files:/var/www/files              # submission files (files_dir)
+    - public:/var/www/html/public       # journal logos, public uploads
+    - config:/var/www/config            # config.inc.php (the installer writes into it)
+
+services:
+  ephpm:
+    <<: *ojs
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The official image's crontab: scheduled tasks every hour.
+  cron:
+    <<: *ojs
+    command: ["sh", "-c", "while true; do ephpm php /var/www/html/tools/runScheduledTasks.php; sleep 3600; done"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: pkp
+      MARIADB_USER: pkp
+      MARIADB_PASSWORD: changeMePlease
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  files:
+  public:
+  config:
+  db-data:

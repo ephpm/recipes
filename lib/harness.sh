@@ -115,6 +115,19 @@ expect_body() {
     echo "==> $url body matches /$pat/"
 }
 
+# form_value URL FIELD [curl args...] — print the value attribute of the
+# first <input name="FIELD" ...> on the page (CSRF tokens, nonces). Pass
+# `-c "$jar" -b "$jar"` so the token matches the session cookie.
+form_value() {
+    local url="$1" name="$2"; shift 2
+    local body
+    body="$(curl -s --max-time 30 "$@" "$url" || true)"
+    printf '%s' "$body" \
+        | grep -oE "<input[^>]*name=[\"']${name}[\"'][^>]*>" \
+        | sed -nE 's/.*value=["'"'"']([^"'"'"']*)["'"'"'].*/\1/p' \
+        | awk 'NR==1'
+}
+
 # run_in SERVICE CMD... — exec inside a compose service
 run_in() {
     local svc="$1"; shift

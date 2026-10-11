@@ -23,10 +23,23 @@ done
 # writes the APP_KEY it generates there, and the official image likewise
 # keeps .env outside the image. Values set in the container environment win
 # over the file.
-if [ ! -f "$STORAGE/.env" ]; then
-    cp "$APP/.env.example" "$STORAGE/.env"
-    sed -i 's|^APP_DEBUG=.*|APP_DEBUG=false|; s|^MEDIA_PATH=.*|MEDIA_PATH=/music|' "$STORAGE/.env"
-fi
+# Only the server seeds it; a command container (the scheduler) waits for
+# the seed (koel:init writes APP_KEY into it) so the two never race.
+case "${1:-}" in
+    ""|-*)
+        if [ ! -f "$STORAGE/.env" ]; then
+            cp "$APP/.env.example" "$STORAGE/.env"
+            sed -i 's|^APP_DEBUG=.*|APP_DEBUG=false|; s|^MEDIA_PATH=.*|MEDIA_PATH=/music|' "$STORAGE/.env"
+        fi
+        ;;
+    *)
+        i=0
+        until [ -f "$STORAGE/.env" ] && grep -q '^APP_KEY=.\+' "$STORAGE/.env"; do
+            i=$((i + 1)); [ "$i" -ge 180 ] && { echo "!!! storage/.env was not seeded by the server after 180s" >&2; exit 1; }
+            sleep 1
+        done
+        ;;
+esac
 ln -sfn "$STORAGE/.env" "$APP/.env"
 
 # Wait for the database.

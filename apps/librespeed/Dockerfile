@@ -32,6 +32,9 @@ RUN mkdir -p /tmp/ls /speedtest/results \
 FROM docker.io/ephpm/ephpm:${EPHPM_TAG}
 
 COPY --from=src /speedtest /speedtest
+# The base image ships ePHPm's own test fixtures in /var/www/html (phpinfo()
+# among them, see issues/joomla.md); entrypoint.sh rebuilds the web root anyway.
+RUN rm -rf /var/www/html
 COPY ephpm.toml /etc/ephpm/ephpm.toml
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh \

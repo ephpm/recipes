@@ -54,6 +54,7 @@ run_variant() {
     size="$(curl -s -o /dev/null -w '%{size_download}' "$BASE/results/telemetry_settings.php")"
     [ "$size" = "0" ] || { echo "!!! results/telemetry_settings.php sent $size bytes" >&2; return 1; }
     echo "==> results/telemetry_settings.php runs as PHP (empty body)"
+    expect_status "$BASE/info.php" 404       # the base image's E2E fixtures are gone (issues/joomla.md)
 
     rm -f "$jar"
     compose down -v --remove-orphans

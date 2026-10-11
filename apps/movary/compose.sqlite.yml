@@ -1,0 +1,38 @@
+# Movary on ePHPm — Movary's own SQLite database (its default) + the job worker.
+#
+#   TMDB_API_KEY=... ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=change-me docker compose -f compose.sqlite.yml up -d
+#
+# No database server: storage/movary.sqlite in the storage volume. This is
+# Movary's documented default, not ePHPm's experimental embedded engine.
+
+x-movary: &movary
+  build: .
+  image: recipes-movary
+  environment:
+    TMDB_API_KEY: ${TMDB_API_KEY:-}
+    APPLICATION_URL: ${APPLICATION_URL:-http://localhost:8080}
+    DATABASE_MODE: sqlite
+    TIMEZONE: UTC
+    ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+    ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    ADMIN_NAME: ${ADMIN_NAME:-admin}
+  volumes:
+    - storage:/app/storage
+
+services:
+  ephpm:
+    <<: *movary
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  jobs:
+    <<: *movary
+    command: ["sh", "-c", "while true; do movary jobs:process; sleep 2; done"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  storage:

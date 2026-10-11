@@ -1,0 +1,70 @@
+# Movary on ePHPm + MariaDB (+ the job worker).
+#
+#   TMDB_API_KEY=... ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080
+#
+# Replaces: the official leepeuker/movary image (nginx + php-fpm + the job
+# worker under supervisord) and its docker-compose.mysql.yml.
+
+x-movary: &movary
+  build: .
+  image: recipes-movary
+  environment: &movary-env
+    # Same variable names as leepeuker/movary (docs/configuration.md).
+    TMDB_API_KEY: ${TMDB_API_KEY:-}            # required for movie data; get one at themoviedb.org
+    APPLICATION_URL: ${APPLICATION_URL:-http://localhost:8080}
+    DATABASE_MODE: mysql
+    DATABASE_MYSQL_HOST: db
+    DATABASE_MYSQL_PORT: 3306
+    DATABASE_MYSQL_NAME: movary
+    DATABASE_MYSQL_USER: movary
+    DATABASE_MYSQL_PASSWORD: movary
+    TIMEZONE: UTC
+    # First admin account (only created while the e-mail does not exist)
+    ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+    ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    ADMIN_NAME: ${ADMIN_NAME:-admin}
+    # APPLICATION_SECRET: generated once into the storage volume when unset
+    # ENABLE_REGISTRATION: "1"
+  volumes:
+    - storage:/app/storage
+
+services:
+  ephpm:
+    <<: *movary
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Background jobs (TMDB sync, imports, image cache) — the official image
+  # runs this loop under supervisord in the same container.
+  jobs:
+    <<: *movary
+    command: ["sh", "-c", "while true; do movary jobs:process; sleep 2; done"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: movary
+      MARIADB_USER: movary
+      MARIADB_PASSWORD: movary
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  storage:
+  db-data:

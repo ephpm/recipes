@@ -1,0 +1,63 @@
+# Pelican Panel on ePHPm — SQLite on a volume (the official image's default).
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in with PELICAN_ADMIN_EMAIL / PELICAN_ADMIN_PASSWORD
+#
+# Replaces: the ghcr.io/pelican/panel image (Caddy + php-fpm + supervisord
+# running the scheduler and the queue worker).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-pelican
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: &env
+      # The URL users (and Wings nodes) reach the panel at.
+      APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      # SQLite in the pelican-data volume (upstream's default). For MySQL set
+      # DB_CONNECTION=mysql plus DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD.
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /pelican-data/database/database.sqlite
+      # First-run admin (p:user:make); change the password.
+      PELICAN_ADMIN_EMAIL: admin@example.com
+      PELICAN_ADMIN_USERNAME: admin
+      PELICAN_ADMIN_PASSWORD: Recipe-Pass-9731
+      MAIL_MAILER: log
+      QUEUE_CONNECTION: database
+      # Cache and sessions default to the `file` driver (storage/framework).
+      # To keep them in ePHPm's in-process KV store instead, uncomment:
+      # CACHE_STORE: redis
+      # SESSION_DRIVER: redis
+      # REDIS_CLIENT: predis
+      # REDIS_HOST: 127.0.0.1
+    volumes:
+      - pelican-data:/pelican-data     # .env (APP_KEY), the SQLite database, storage, plugins
+    restart: unless-stopped
+
+  # The official image runs both of these under supervisord.
+  scheduler:
+    image: recipes-pelican
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    environment: *env
+    volumes:
+      - pelican-data:/pelican-data
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  queue:
+    image: recipes-pelican
+    command: ["ephpm", "php", "artisan", "queue:work", "--sleep=3", "--tries=3"]
+    environment: *env
+    volumes:
+      - pelican-data:/pelican-data
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+volumes:
+  pelican-data:

@@ -1,0 +1,43 @@
+# ePHPm configuration for Pelican Panel (SQLite by default, MySQL optional).
+#
+# Pelican (Laravel 13 + Filament 5) uses pdo_sqlite on /pelican-data by
+# default; ePHPm is the web server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Laravel's web root is public/; the application code sits above it.
+document_root = "/app/public"
+index_files = ["index.php"]
+# The official Caddyfile's php_fastcgi does the same front-controller routing.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 104857600           # 100 MiB — file uploads through the panel
+
+[server.timeouts]
+request = 600
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[php]
+max_execution_time = 300
+memory_limit = "512M"
+ini_overrides = [
+    # v0.11.3 still inherits PHP's compiled-in display_errors=1 under `ephpm serve`;
+    # keep warnings out of responses and in the container log
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "100M"],
+    ["post_max_size", "100M"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (OPcache refresh after an
+# upgrade) and `ephpm kv ...` can reach the in-process store. Not published
+# outside the container. With CACHE_STORE=redis / SESSION_DRIVER=redis,
+# REDIS_CLIENT=predis and REDIS_HOST=127.0.0.1 Pelican uses it instead of a
+# Redis service.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

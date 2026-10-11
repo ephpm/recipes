@@ -43,6 +43,19 @@ compose_path() {
     if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi
 }
 
+# A path both native Windows tools (curl.exe) and the MSYS tools (grep) can
+# open: C:/Users/... on Git Bash, unchanged elsewhere.
+native_path() {
+    if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
+}
+
+# cookie_jar — prints the path of a fresh temp file usable as `curl -c/-b`
+# on every platform (on Git Bash the MSYS /tmp/... path is silently
+# written elsewhere by the native curl, so hand it a native path).
+cookie_jar() {
+    native_path "$(mktemp)"
+}
+
 compose() {
     # shellcheck disable=SC2086
     $COMPOSE -p "$PROJECT" -f "$(compose_path "$COMPOSE_FILE")" "$@"

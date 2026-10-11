@@ -20,7 +20,7 @@ run_variant() {
     expect_body "$BASE/" "ePHPm Recipe"
 
     # 2. real workflow: log in and reach the dashboard
-    local jar; jar="$(mktemp)"
+    local jar; jar="$(cookie_jar)"
     curl -s -o /dev/null -c "$jar" "$BASE/wp-login.php"
     expect_status "$BASE/wp-login.php" 302 -c "$jar" -b "$jar" \
         --data "log=admin&pwd=recipe-pass-123&wp-submit=Log+In&redirect_to=%2Fwp-admin%2F&testcookie=1"

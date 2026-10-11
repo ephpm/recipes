@@ -53,6 +53,12 @@ until compose logs queue 2>/dev/null | grep -E 'AccountCreated.*DONE' >/dev/null
     sleep 1
 done
 echo "==> queue service processed the AccountCreated notification job"
+# scheduled commands are started with the `php` shim, not `ephpm` (Dockerfile)
+bin="$(run_in scheduler ephpm php -r 'require "vendor/autoload.php"; echo Illuminate\Console\Application::phpBinary();' 2>/dev/null)"
+case "$bin" in
+    *"/usr/local/bin/php"*) echo "==> scheduler builds commands with $bin" ;;
+    *) echo "!!! scheduled commands would run with '$bin'" >&2; exit 1 ;;
+esac
 out="$(run_in scheduler ephpm php artisan schedule:run 2>&1)" \
     || { echo "!!! schedule:run failed in the scheduler service: $out" >&2; exit 1; }
 echo "$out" | tail -3

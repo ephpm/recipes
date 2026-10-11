@@ -47,6 +47,13 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 # `php` on PATH: Laravel's scheduler and tools that re-invoke PHP look for
 # a `php` binary (PHP_BINARY is `ephpm` here), so give them `ephpm php`.
 RUN printf '#!/bin/sh\nexec ephpm php "$@"\n' > /usr/local/bin/php && chmod +x /usr/local/bin/php
+# The shim alone is not enough for the scheduler: Laravel builds every
+# scheduled command as `<php_binary()> artisan ...`, and Symfony's
+# PhpExecutableFinder returns the PHP_BINARY *constant* (`ephpm` under
+# `ephpm php`, ephpm#558) — so `schedule:run` would run `ephpm artisan ...`,
+# which fails, and still print DONE. The finder checks the PHP_BINARY
+# *environment variable* first; point it at the shim.
+ENV PHP_BINARY=/usr/local/bin/php
 WORKDIR /app
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && mkdir -p bootstrap/cache storage/logs storage/framework/sessions storage/framework/views storage/framework/cache /app/var \

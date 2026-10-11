@@ -37,6 +37,13 @@ panel's `APP_URL`.
 * **No certbot.** Terminate TLS in front (or use ePHPm's own `[server.tls]`
   ACME support) instead of the image's certbot/nginx SSL config;
   `LE_EMAIL` is not used.
+* **`PHP_BINARY=/usr/local/bin/php` in the image.** Laravel starts every
+  scheduled command as `<PHP_BINARY> artisan ...`; under `ephpm php` the
+  `PHP_BINARY` constant is `ephpm`, so without this the scheduler would run
+  `ephpm artisan ...`, fail, and still print `DONE`
+  ([`issues/pterodactyl.md`](../../issues/pterodactyl.md)). Symfony's
+  `PhpExecutableFinder` prefers the environment variable, which points at
+  the `php` → `ephpm php` shim.
 * `mariadb-client` is installed: the panel ships a schema dump that
   `migrate` loads through the `mysql` CLI on a fresh database (the official
   image installs `mysql-client` for the same reason).

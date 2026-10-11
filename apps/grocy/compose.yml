@@ -1,0 +1,26 @@
+# Grocy on ePHPm — one container; Grocy's own SQLite database in the data volume.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in with admin / admin, then change the password
+#
+# Replaces: the linuxserver/grocy image (nginx + php-fpm + s6).
+# Any setting from config-dist.php can be set as GROCY_<SETTING> (Grocy reads
+# them itself; same as the linuxserver image).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-grocy
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      GROCY_CULTURE: ${GROCY_CULTURE:-en}
+      GROCY_CURRENCY: ${GROCY_CURRENCY:-USD}
+      # GROCY_BASE_URL: https://grocy.example.com/
+    volumes:
+      - grocy-data:/var/www/html/data       # grocy.db, config.php, uploaded files
+    restart: unless-stopped
+
+volumes:
+  grocy-data:

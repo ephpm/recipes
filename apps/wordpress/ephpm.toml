@@ -1,0 +1,43 @@
+# ePHPm configuration for WordPress — external database (MySQL/MariaDB).
+#
+# WordPress connects straight to the database host in WORDPRESS_DB_HOST with
+# mysqli; ePHPm is the web server + PHP runtime + object cache. Every key is
+# documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php", "index.html"]
+# Pretty permalinks: the equivalent of WordPress's .htaccess rewrite rules.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 67108864            # 64 MiB uploads (keep in sync with the ini below)
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# Never execute PHP dropped into uploads/, and keep xmlrpc.php off the internet.
+blocked_paths = ["/wp-content/uploads/*.php", "/xmlrpc.php"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [
+    ["upload_max_filesize", "64M"],
+    ["post_max_size", "64M"],
+]
+
+# Loopback RESP listener so `ephpm kv ...`, `ephpm deploy` and
+# `ephpm cache reset` can reach the in-process store from inside the
+# container (the object cache itself does not need it — the drop-in calls
+# ephpm_kv_* directly). Not published outside the container.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

@@ -1,0 +1,52 @@
+name: recipes
+
+# Builds and smoke-tests every recipe under apps/ on GitHub-hosted runners.
+# Each recipe's test.sh builds its image(s), starts its compose stack, waits
+# for the home page, exercises one real workflow, and tears everything down.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: recipes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.list.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: |
+          apps=$(ls -d apps/*/ | xargs -n1 basename | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "apps=$apps" >> "$GITHUB_OUTPUT"
+
+  smoke:
+    needs: discover
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        app: ${{ fromJson(needs.discover.outputs.apps) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Smoke test ${{ matrix.app }}
+        run: bash "apps/${{ matrix.app }}/test.sh"
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -p "recipes-${{ matrix.app }}" -f "apps/${{ matrix.app }}/compose.yml" logs --tail=200 || true
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get install -y -qq shellcheck >/dev/null
+          shellcheck -x lib/*.sh apps/*/test.sh apps/*/*.sh

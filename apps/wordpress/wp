@@ -1,0 +1,3 @@
+#!/bin/sh
+# WP-CLI through the embedded PHP: same version and extensions as the server.
+exec ephpm php -d memory_limit=512M /usr/local/lib/wp-cli.phar --path=/var/www/html --allow-root "$@"

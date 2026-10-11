@@ -1,0 +1,47 @@
+# Koillection on ePHPm + MariaDB.
+#
+#   docker compose -f compose.mariadb.yml up -d
+
+services:
+  ephpm:
+    build: .
+    image: recipes-koillection
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      DB_DRIVER: pdo_mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: koillection
+      DB_USER: koillection
+      DB_PASSWORD: koillection
+      DB_VERSION: 11.4.0-MariaDB
+      PHP_TZ: UTC
+    volumes:
+      - uploads:/app/public/public/uploads
+      - state:/var/lib/koillection
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: koillection
+      MARIADB_USER: koillection
+      MARIADB_PASSWORD: koillection
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  uploads:
+  state:
+  db-data:

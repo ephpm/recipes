@@ -1,0 +1,4 @@
+#!/bin/sh
+# Koillection's Symfony console through the embedded PHP
+# (`docker compose exec ephpm koillection app:refresh-cached-values`).
+exec ephpm php -d memory_limit=-1 -d extension=/opt/ephpm-ext/apcu.so -d apc.enable_cli=1 /app/public/bin/console "$@"

@@ -1,0 +1,62 @@
+# ePHPm configuration for Koillection — external database (PostgreSQL/MariaDB).
+#
+# Koillection reads its configuration from .env.local (written by
+# entrypoint.sh from the same DB_* / APP_* variables the official image
+# uses); ePHPm is the web server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app/public/public"
+index_files = ["index.php"]
+# The official Caddyfile: /uploads/* from disk, everything else php_server
+# (Symfony's index.php). Same thing as nginx try_files $uri /index.php.
+fallback = ["$uri", "/index.php?$query_string"]
+
+[server.timeouts]
+request = 300                       # the official php.ini: max_execution_time=200
+
+[server.request]
+max_body_size = 104857600           # 100 MiB — the official UPLOAD_MAX_FILESIZE default for post_max_size
+
+[server.response]
+# The official Caddyfile adds these to every response.
+headers = [
+    ["Referrer-Policy", "same-origin"],
+    ["X-Content-Type-Options", "nosniff"],
+    ["X-Frame-Options", "Deny"],
+]
+
+[server.static]
+cache_control = "public, max-age=86400"   # public/build assets are content-hashed
+
+[server.security]
+blocked_paths = ["/uploads/*.php*", "/uploads/*.phar", "/uploads/*.phtml"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 200            # the official php.ini
+memory_limit = "512M"               # the official PHP_MEMORY_LIMIT default
+# APCu: required by Koillection (an APCu cache pool backs its Twig layer).
+# ZTS build from the ePHPm extension catalog, fetched in the Dockerfile.
+extensions = ["/opt/ephpm-ext/apcu.so"]
+ini_overrides = [
+    ["apc.enable_cli", "1"],            # the console (entrypoint commands) uses the same pool
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+    ["upload_max_filesize", "20M"],     # the official UPLOAD_MAX_FILESIZE default
+    ["post_max_size", "100M"],
+    ["session.cookie_httponly", "1"],
+    ["date.timezone", "UTC"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container (OPcache timestamp
+# validation is off under `ephpm serve`; reset after changing PHP files).
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

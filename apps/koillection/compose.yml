@@ -1,0 +1,53 @@
+# Koillection on ePHPm + PostgreSQL (the database Koillection recommends).
+#
+#   docker compose up -d
+#   open http://localhost:8080      (the first visit creates the first user)
+#
+# Replaces: the official koillection/koillection image (FrankenPHP).
+# For MariaDB/MySQL instead, see compose.mariadb.yml.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-koillection
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # Same variable names as koillection/koillection.
+      DB_DRIVER: pdo_pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: koillection
+      DB_USER: koillection
+      DB_PASSWORD: koillection
+      DB_VERSION: 17
+      PHP_TZ: UTC
+      # APP_SECRET / JWT_PASSPHRASE: generated once into the state volume when unset
+      # UPLOAD_MAX_FILESIZE is a build-time ini here (ephpm.toml), not an env var
+    volumes:
+      - uploads:/app/public/public/uploads
+      - state:/var/lib/koillection
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/postgres:17
+    environment:
+      POSTGRES_DB: koillection
+      POSTGRES_USER: koillection
+      POSTGRES_PASSWORD: koillection
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U koillection -d koillection"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  uploads:
+  state:
+  db-data:

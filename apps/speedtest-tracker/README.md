@@ -81,8 +81,9 @@ docker compose logs ephpm queue                                               # 
 * Speedtests need outbound internet from the `queue` container (Ookla
   servers); `test.sh` only checks the CLI is installed.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default).
-  After changing PHP files run `docker compose exec ephpm ephpm cache reset`
-  or restart the container.
+  After changing PHP files restart the containers (`ephpm cache reset` is a
+  no-op on a single node in v0.11.3 unless `[opcache] cluster_invalidation =
+  true` is set — `issues/nextcloud.md`).
 
 ## Known limitations
 

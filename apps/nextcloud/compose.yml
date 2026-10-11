@@ -1,0 +1,85 @@
+# Nextcloud on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in with NEXTCLOUD_ADMIN_USER / NEXTCLOUD_ADMIN_PASSWORD
+#
+# Replaces: the nextcloud:apache image (or nextcloud:fpm + nginx) and the
+# `cron` container of upstream's compose examples. Same variable names as the
+# official image.
+
+x-nextcloud-env: &env
+  MYSQL_HOST: db
+  MYSQL_DATABASE: nextcloud
+  MYSQL_USER: nextcloud
+  MYSQL_PASSWORD: nextcloud
+  # First-start auto-install (as the official image); leave unset to use the web installer.
+  NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
+  NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-change-me-Nc-9731}
+  # Space-separated host names the instance answers to (no port).
+  NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS:-localhost 127.0.0.1}
+  # Behind a TLS-terminating proxy:
+  # OVERWRITEPROTOCOL: https
+  # OVERWRITECLIURL: https://cloud.example.com
+  # TRUSTED_PROXIES: 10.0.0.0/8
+
+x-nextcloud-volumes: &volumes
+  - nextcloud-config:/var/www/html/config
+  - nextcloud-data:/var/www/html/data
+  - nextcloud-apps:/var/www/html/custom_apps
+
+services:
+  ephpm:
+    build: .
+    image: recipes-nextcloud
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: *env
+    volumes: *volumes
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Background jobs: GET /cron.php every 5 minutes (Nextcloud's "Webcron"
+  # mode; upstream's examples run `php cron.php` in a cron container, which
+  # `ephpm php` cannot do — see README).
+  cron:
+    image: recipes-nextcloud
+    command:
+      - sh
+      - -c
+      - >-
+        while :; do
+        ephpm php -r '$$r = @file_get_contents("http://ephpm:8080/cron.php", false, stream_context_create(["http" => ["header" => "Host: localhost\r\n", "timeout" => 3600]])); echo date("c"), " cron.php: ", $$r === false ? "failed" : $$r, "\n";';
+        sleep 300;
+        done
+    environment: *env
+    volumes: *volumes
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    # Nextcloud's recommended settings
+    command: ["--transaction-isolation=READ-COMMITTED", "--log-bin=binlog", "--binlog-format=ROW"]
+    environment:
+      MARIADB_DATABASE: nextcloud
+      MARIADB_USER: nextcloud
+      MARIADB_PASSWORD: nextcloud
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  nextcloud-config:
+  nextcloud-data:
+  nextcloud-apps:
+  db-data:

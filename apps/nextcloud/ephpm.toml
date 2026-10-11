@@ -1,0 +1,71 @@
+# ePHPm configuration for Nextcloud (MySQL/MariaDB database).
+#
+# Nextcloud connects to its database itself (pdo_mysql); ePHPm is the web
+# server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php", "index.html"]
+# nginx: try_files $uri $uri/ /index.php$request_uri. No "$uri/" here:
+# /apps/files/ is a real directory (the app's code) but a front-controller
+# route, which nginx reaches through its `index ... /index.php$request_uri`.
+# Entry points with a trailing path (/remote.php/dav/...) also land here and
+# are dispatched by ephpm-pathinfo.php (auto_prepend_file below).
+fallback = ["$uri", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 536870912           # 512 MiB per request (the web UI and the clients upload in chunks)
+
+[server.timeouts]
+request = 3600                      # long WebDAV transfers, the official image's max_execution_time
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# nginx reference config: location ~ ^/(?:build|tests|config|lib|3rdparty|templates|data)(?:$|/)
+# and ^/(?:\.|autotest|occ|issue|indie|db_|console) → 404. Dotfiles are
+# refused by [server.static] hidden_files (default "deny").
+blocked_paths = [
+    "/build", "/build/*", "/tests", "/tests/*", "/config", "/config/*",
+    "/lib", "/lib/*", "/3rdparty", "/3rdparty/*", "/templates", "/templates/*",
+    "/data", "/data/*", "/autotest*", "/occ", "/issue*", "/indie*", "/db_*",
+    "/console*",
+]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 3600
+memory_limit = "512M"               # the official PHP_MEMORY_LIMIT default
+# APCu (memcache.local) — ZTS build from the ePHPm extension catalog.
+extensions = ["/opt/ephpm-ext/apcu.so"]
+ini_overrides = [
+    # PATH_INFO dispatch for /remote.php/..., /ocs/v2.php/..., /index.php/...
+    ["auto_prepend_file", "/usr/local/share/nextcloud/ephpm-pathinfo.php"],
+    ["apc.enable_cli", "1"],
+    ["upload_max_filesize", "512M"],    # the official PHP_UPLOAD_LIMIT default
+    ["post_max_size", "512M"],
+    ["output_buffering", "0"],          # Nextcloud's recommended php.ini
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (OPcache refresh after an
+# upgrade or app install) and `ephpm kv ...` can reach the in-process store.
+# Not published outside the container.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"
+
+# Make `ephpm cache reset` take effect on this single node (app updates
+# replace PHP files under custom_apps/). v0.11.3 only watches the reset key
+# when this is on, and it is off by default without [cluster] — see
+# issues/nextcloud.md.
+[opcache]
+cluster_invalidation = true

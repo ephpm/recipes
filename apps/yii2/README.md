@@ -47,7 +47,7 @@ hard-coded `app\models\User` identities — replace them in a real app).
 ```bash
 docker compose exec ephpm ephpm php yii migrate                 # console commands
 docker compose exec ephpm ephpm php yii migrate/create add_post_table
-docker compose exec ephpm ephpm cache reset                     # after changing PHP files
+docker compose restart ephpm                                     # after changing PHP files (see below)
 ```
 
 For your own application, replace the `composer create-project` line in the
@@ -75,9 +75,10 @@ For your own application, replace the `composer create-project` line in the
   `yiisoft/yii2-redis` (pure PHP) with `hostname => '127.0.0.1'` can back
   `yii\redis\Cache` and `yii\redis\Session` without a Redis service. Not
   exercised by `test.sh`.
-* OPcache runs with timestamp validation off (`ephpm serve` default): run
-  `docker compose exec ephpm ephpm cache reset` or restart after changing
-  PHP files.
+* OPcache runs with timestamp validation off (`ephpm serve` default):
+  restart the container after changing PHP files. (`ephpm cache reset` is a
+  no-op on a single node in v0.11.3 unless `[opcache] cluster_invalidation =
+  true` is set — `issues/nextcloud.md`.)
 
 ## Known limitations
 

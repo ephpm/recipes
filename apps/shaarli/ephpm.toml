@@ -1,0 +1,52 @@
+# ePHPm configuration for Shaarli (flat-file; no database).
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Shaarli's web root is the application root (index.php is the Slim front
+# controller; data/, cache/, vendor/ … live next to it, see blocked_paths).
+document_root = "/var/www/shaarli"
+index_files = ["index.php", "index.html"]
+# .docker/nginx.conf: static assets by extension, everything else
+# `try_files _ /index.php$is_args$args` (Slim routing on REQUEST_URI).
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 10485760            # 10 MiB (nginx client_max_body_size 10m; imports)
+
+[server.static]
+# nginx: `expires max` on static assets (Shaarli cache-busts with ?v=…)
+cache_control = "public, max-age=31536000"
+
+[server.security]
+# nginx only ever executes index.php; every other .php (plugins, inc/, the
+# PHP-wrapped data files) is unreachable there. The private directories are
+# not served at all (.htaccess forbids .git/doxygen/vendor; data/ holds the
+# credentials and the datastore) and the remaining top-level PHP files are
+# blocked by name. (`allowed_php_paths = ["/index.php"]` would be the
+# natural spelling, but it is matched against the request URI, so the
+# rewritten /login → index.php would be refused — see issues/shaarli.md.)
+blocked_paths = ["/data/*", "/cache/*", "/pagecache/*", "/tmp/*", "/vendor/*",
+                 "/application/*", "/inc/*", "/.git*", "/doxygen/*",
+                 "/plugins/*/*.php", "/init.php", "/shaarli_version.php"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "128M"
+ini_overrides = [
+    ["upload_max_filesize", "10M"],
+    ["post_max_size", "10M"],
+    # PHP sessions in ePHPm's in-process KV store instead of files in /tmp.
+    ["session.save_handler", "ephpm"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

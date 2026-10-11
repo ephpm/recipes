@@ -1,0 +1,22 @@
+# Shaarli on ePHPm — one container, no database (Shaarli is flat-file).
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: nginx + php-fpm + s6 (the shaarli/shaarli image).
+# First visit shows Shaarli's installer. Back up the `data` volume.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-shaarli
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    volumes:
+      - data:/var/www/shaarli/data
+      - cache:/var/www/shaarli/cache
+    restart: unless-stopped
+
+volumes:
+  data:
+  cache:

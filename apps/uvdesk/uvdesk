@@ -1,0 +1,5 @@
+#!/bin/sh
+# UVdesk's Symfony console through the embedded PHP
+# (`docker compose exec ephpm uvdesk debug:router`).
+# (deprecations muted: Symfony 5.4 logs dozens per command on PHP 8.3)
+exec ephpm php -d memory_limit=-1 -d "error_reporting=E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED" /app/bin/console "$@"

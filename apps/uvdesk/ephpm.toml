@@ -1,0 +1,50 @@
+# ePHPm configuration for UVdesk Community Helpdesk (MySQL/MariaDB).
+#
+# UVdesk (Symfony 5.4) reads DATABASE_URL from the environment; ePHPm is
+# the web server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app/public"
+index_files = ["index.php"]
+# public/.htaccess: anything that is not a file goes to the front
+# controller (Symfony routes from REQUEST_URI).
+fallback = ["$uri", "/index.php?$query_string"]
+
+[server.timeouts]
+request = 120
+
+[server.request]
+max_body_size = 8388608             # 8 MiB — the max_post_size UVdesk's uvdesk.yaml enforces
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# Ticket attachments land under public/assets: never execute PHP there.
+blocked_paths = ["/assets/*.php*", "/assets/*.phtml", "/*.htaccess"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 110            # below [server.timeouts] request so PHP's own timeout can fire
+memory_limit = "512M"
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+    # Symfony 5.4 logs a deprecation for nearly every request on PHP 8.3
+    ["error_reporting", "E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED"],
+    ["upload_max_filesize", "2M"],      # uvdesk.yaml's upload_max_filesize
+    ["post_max_size", "8M"],
+    ["date.timezone", "UTC"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

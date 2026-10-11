@@ -1,0 +1,50 @@
+# UVdesk Community Helpdesk on ePHPm + MariaDB.
+#
+#   UVDESK_ADMIN_EMAIL=you@example.com UVDESK_ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080/en/member/login
+#
+# Replaces: the official community-skeleton image (apache2 + mod_php with a
+# MySQL server in the same container).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-uvdesk
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      DATABASE_URL: mysql://uvdesk:uvdesk@db:3306/uvdesk?serverVersion=mariadb-11.8.0
+      # Symfony's secret (CSRF, remember-me). Set your own.
+      APP_SECRET: ${APP_SECRET:-change-me-to-a-long-random-string}
+      MAILER_URL: null://localhost
+      MAILER_DSN: null://null
+      UVDESK_SITE_URL: ${UVDESK_SITE_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      # First super admin, created on the first start.
+      UVDESK_ADMIN_EMAIL: ${UVDESK_ADMIN_EMAIL:-}
+      UVDESK_ADMIN_PASSWORD: ${UVDESK_ADMIN_PASSWORD:-}
+    volumes:
+      - assets:/app/public/assets      # attachments, avatars
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: uvdesk
+      MARIADB_USER: uvdesk
+      MARIADB_PASSWORD: uvdesk
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  assets:
+  db-data:

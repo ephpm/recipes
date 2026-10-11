@@ -1,0 +1,43 @@
+# ePHPm configuration for YOURLS — external database (MySQL/MariaDB).
+#
+# YOURLS connects to YOURLS_DB_HOST itself with PDO; ePHPm is the web server
+# + PHP runtime. Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php", "index.html"]
+# The .htaccess YOURLS writes at install time (and the official image's
+# vhost.conf): anything that is not a file or directory → yourls-loader.php,
+# which resolves the short keyword.
+fallback = ["$uri", "$uri/", "/yourls-loader.php?$query_string"]
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# Code-only directories and the config file are never served; with Apache
+# these are reachable only through the rewrite.
+blocked_paths = ["/includes/*", "/user/config.php", "/user/plugins/*/*.php",
+                 "/user/languages/*", "/user/pages/*", "/.git*"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "128M"
+# ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+# `serve`; keep warnings out of responses and in the container log.
+ini_overrides = [
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

@@ -1,0 +1,52 @@
+# YOURLS on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080/admin/   (EPHPM_PORT overrides the host port —
+#                                        keep YOURLS_SITE in sync with it)
+#
+# Replaces: Apache + mod_php (the yourls:apache image).
+# Same variable names as the official image. YOURLS_SITE must be the public
+# URL short links are built from; YOURLS_USER / YOURLS_PASS is the admin.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-yourls
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      YOURLS_SITE: ${YOURLS_SITE:-http://localhost:8080}
+      YOURLS_USER: ${YOURLS_USER:-admin}
+      YOURLS_PASS: ${YOURLS_PASS:-yourls-admin-password}
+      YOURLS_DB_HOST: db
+      YOURLS_DB_NAME: yourls
+      YOURLS_DB_USER: yourls
+      YOURLS_DB_PASS: yourls
+      # YOURLS_PRIVATE: "false"     # public shortening (no login needed)
+      # YOURLS_COOKIEKEY: ...       # otherwise generated once into the user volume
+    volumes:
+      - user:/var/www/html/user
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: yourls
+      MARIADB_USER: yourls
+      MARIADB_PASSWORD: yourls
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  user:
+  db-data:

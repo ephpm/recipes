@@ -1,0 +1,56 @@
+# InvoicePlane on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port; set
+#                                 IP_URL to match the URL you actually use)
+#
+# Replaces: nginx + php-fpm (the upstream docker-compose.yml) or php:8.2-apache
+# (the upstream Containerfile).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-invoiceplane
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # Public base URL without a trailing slash — InvoicePlane builds every
+      # link, redirect and cookie from it.
+      IP_URL: ${IP_URL:-http://localhost:8080}
+      DB_HOSTNAME: db
+      DB_USERNAME: invoiceplane
+      DB_PASSWORD: invoiceplane
+      DB_DATABASE: invoiceplane
+      # First-start admin account (only used while the database has no users)
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@localhost}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-}   # empty = random, printed in the log
+      # ENCRYPTION_KEY: generated once into the storage volume when unset
+      # COOKIE_SECURE: "true"   # when IP_URL is https://
+    volumes:
+      - uploads:/var/www/html/uploads
+      - storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: invoiceplane
+      MARIADB_USER: invoiceplane
+      MARIADB_PASSWORD: invoiceplane
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  uploads:
+  storage:
+  db-data:

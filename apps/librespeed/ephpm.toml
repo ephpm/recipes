@@ -1,0 +1,43 @@
+# ePHPm configuration for LibreSpeed.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# entrypoint.sh assembles the web root from /speedtest at every start.
+document_root = "/var/www/html"
+index_files = ["index.html", "index.php"]
+
+[server.request]
+# The upload test POSTs 20 MiB blobs to empty.php (speedtest_worker.js
+# xhr_ul_blob_megabytes); the official image raises post_max_size to 32M.
+max_body_size = 33554432
+
+[server.response]
+# garbage.php output is random bytes and the upload/ping endpoints are tiny:
+# compressing either only burns CPU and skews the measurement.
+compression = false
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# The SQLite telemetry database lives in /database (outside the web root);
+# nothing under results/ but the PHP endpoints needs to be fetched directly.
+blocked_paths = ["/results/*.sql", "/.git*"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    # docker/librespeed-php.ini in the official image
+    ["post_max_size", "32M"],
+]

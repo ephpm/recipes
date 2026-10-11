@@ -1,0 +1,57 @@
+# LibreSpeed on ePHPm + MariaDB (telemetry / results database).
+#
+#   docker compose up -d
+#   open http://localhost:8080                 (EPHPM_PORT overrides the host port)
+#   open http://localhost:8080/results/stats.php   (PASSWORD below)
+#
+# Replaces: the official ghcr.io/librespeed/speedtest image (Apache + mod_php)
+# and its MySQL telemetry setup. Same variables as the official image; the
+# telemetry table is created on first start (upstream leaves that to you).
+# The speed test itself needs no database: TELEMETRY=false drops `db`.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-librespeed
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      MODE: standalone
+      TITLE: ${TITLE:-LibreSpeed}
+      TELEMETRY: "true"
+      PASSWORD: ${PASSWORD:-librespeed-stats-password}   # stats.php login
+      DB_TYPE: mysql
+      DB_HOSTNAME: db
+      DB_NAME: speedtest
+      DB_USERNAME: speedtest
+      DB_PASSWORD: speedtest
+      ENABLE_ID_OBFUSCATION: ${ENABLE_ID_OBFUSCATION:-false}
+      REDACT_IP_ADDRESSES: ${REDACT_IP_ADDRESSES:-false}
+      GDPR_EMAIL: ${GDPR_EMAIL:-}
+      USE_NEW_DESIGN: ${USE_NEW_DESIGN:-false}
+    volumes:
+      - database:/database          # the ID-obfuscation salt (and SQLite, with DB_TYPE=sqlite)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: speedtest
+      MARIADB_USER: speedtest
+      MARIADB_PASSWORD: speedtest
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  database:
+  db-data:

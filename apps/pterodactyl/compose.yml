@@ -1,0 +1,106 @@
+# Pterodactyl Panel on ePHPm + MariaDB + Redis.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port — keep
+#                                 APP_URL in sync with it)
+#   log in with PTERODACTYL_ADMIN_EMAIL / PTERODACTYL_ADMIN_PASSWORD
+#
+# Replaces: the ghcr.io/pterodactyl/panel image (nginx + php-fpm + supervisord
+# running the queue worker, crond running the scheduler). Redis stays: it is
+# the queue broker the worker sidecar reads, and the panel's cache/sessions.
+# Wings (the node daemon) is separate and unchanged.
+
+x-panel-env: &panel-env
+  APP_URL: ${APP_URL:-http://localhost:8080}
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_TIMEZONE: ${APP_TIMEZONE:-UTC}
+  APP_SERVICE_AUTHOR: ${APP_SERVICE_AUTHOR:-noreply@example.com}
+  APP_ENVIRONMENT_ONLY: "false"
+  DB_HOST: db
+  DB_PORT: "3306"
+  DB_DATABASE: panel
+  DB_USERNAME: pterodactyl
+  DB_PASSWORD: ${DB_PASSWORD:-pterodactyl-db-password}
+  CACHE_DRIVER: redis
+  SESSION_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  REDIS_HOST: cache
+  HASHIDS_LENGTH: "8"
+  # reCAPTCHA is on by default upstream (Google's keys); set your own keys
+  # and RECAPTCHA_ENABLED=true for a public panel.
+  RECAPTCHA_ENABLED: ${RECAPTCHA_ENABLED:-false}
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@example.com}
+  # Behind a TLS-terminating proxy: TRUSTED_PROXIES: "*"
+
+services:
+  ephpm:
+    build: .
+    image: recipes-pterodactyl
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      <<: *panel-env
+      # First administrator, created on the first start (p:user:make).
+      PTERODACTYL_ADMIN_EMAIL: ${PTERODACTYL_ADMIN_EMAIL:-admin@example.com}
+      PTERODACTYL_ADMIN_USERNAME: ${PTERODACTYL_ADMIN_USERNAME:-admin}
+      PTERODACTYL_ADMIN_PASSWORD: ${PTERODACTYL_ADMIN_PASSWORD:-Ptero-Admin-Pass-1}
+    volumes:
+      - var:/app/var                 # .env with APP_KEY / HASHIDS_SALT
+      - logs:/app/storage/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    restart: unless-stopped
+
+  # supervisord's [program:queue-worker] in the official image
+  queue:
+    image: recipes-pterodactyl
+    command: ["ephpm", "php", "artisan", "queue:work", "--queue=high,standard,low", "--sleep=3", "--tries=3"]
+    environment: *panel-env
+    volumes:
+      - var:/app/var
+      - logs:/app/storage/logs
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  # the official image's crontab: * * * * * php artisan schedule:run
+  scheduler:
+    image: recipes-pterodactyl
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    environment: *panel-env
+    volumes:
+      - var:/app/var
+      - logs:/app/storage/logs
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: panel
+      MARIADB_USER: pterodactyl
+      MARIADB_PASSWORD: ${DB_PASSWORD:-pterodactyl-db-password}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-pterodactyl-root-password}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  cache:
+    image: docker.io/library/redis:7-alpine
+    restart: unless-stopped
+
+volumes:
+  var:
+  logs:
+  db-data:

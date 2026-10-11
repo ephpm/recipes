@@ -1,0 +1,4 @@
+#!/bin/sh
+# Mautic's Symfony console through the embedded PHP
+# (`docker compose exec ephpm mautic mautic:segments:update`).
+exec ephpm php -d memory_limit=-1 /var/www/html/bin/console "$@"

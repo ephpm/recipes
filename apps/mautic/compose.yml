@@ -1,0 +1,82 @@
+# Mautic on ePHPm + MariaDB (+ the cron and worker roles).
+#
+#   MAUTIC_ADMIN_EMAIL=you@example.com MAUTIC_ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080
+#
+# Replaces: the official mautic/mautic image in its three roles
+# (mautic_web, mautic_cron, mautic_worker — examples/basic/docker-compose.yml).
+
+x-mautic: &mautic
+  build: .
+  image: recipes-mautic
+  environment:
+    # Same variable names as mautic/mautic (.mautic_env).
+    MAUTIC_DB_HOST: db
+    MAUTIC_DB_PORT: 3306
+    MAUTIC_DB_DATABASE: mautic
+    MAUTIC_DB_USER: mautic
+    MAUTIC_DB_PASSWORD: mautic
+    MAUTIC_MESSENGER_DSN_EMAIL: doctrine://default
+    MAUTIC_MESSENGER_DSN_HIT: doctrine://default
+    # First-start install (only while config/local.php has no site_url);
+    # leave the admin variables unset to use the web installer at /installer.
+    MAUTIC_SITE_URL: ${MAUTIC_SITE_URL:-http://localhost:8080}
+    MAUTIC_ADMIN_EMAIL: ${MAUTIC_ADMIN_EMAIL:-}
+    MAUTIC_ADMIN_PASSWORD: ${MAUTIC_ADMIN_PASSWORD:-}
+    MAUTIC_ADMIN_USERNAME: ${MAUTIC_ADMIN_USERNAME:-admin}
+  volumes:
+    - config:/var/www/html/config
+    - logs:/var/www/html/var/logs
+    - media-files:/var/www/html/docroot/media/files
+    - media-images:/var/www/html/docroot/media/images
+
+services:
+  ephpm:
+    <<: *mautic
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The official mautic_cron role (templates/mautic_cron).
+  cron:
+    <<: *mautic
+    command: ["sh", "-c", "while true; do mautic mautic:segments:update; mautic mautic:campaigns:update; mautic mautic:campaigns:trigger; sleep 900; done"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  # The official mautic_worker role (messenger consumers under supervisord).
+  worker:
+    <<: *mautic
+    command: ["mautic", "messenger:consume", "email", "hit", "failed", "--time-limit=3600", "--memory-limit=256M"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: mautic
+      MARIADB_USER: mautic
+      MARIADB_PASSWORD: mautic
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  config:
+  logs:
+  media-files:
+  media-images:
+  db-data:

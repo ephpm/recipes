@@ -1,0 +1,45 @@
+# ePHPm configuration for Shlink — external database (MariaDB/MySQL/PostgreSQL).
+#
+# Shlink reads its whole configuration from environment variables (the same
+# ones the official image documents); ePHPm is the web server + PHP runtime.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/etc/shlink/public"
+index_files = ["index.php"]
+# Shlink's classic-web-server nginx config: try_files $uri $uri/ /index.php$is_args$args
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 10485760            # 10 MiB — the API only takes JSON and small imports
+
+[server.response]
+# Shlink returns JSON and 302s; nothing worth compressing but the web client
+# assets it does not serve. Left on (default) for the /rest list endpoints.
+compression = true
+
+[server.static]
+cache_control = "public, max-age=86400"   # only favicon.ico lives under public/
+
+[server.security]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container (OPcache timestamp
+# validation is off under `ephpm serve`; reset after changing PHP files).
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

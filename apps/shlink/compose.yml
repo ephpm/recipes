@@ -1,0 +1,55 @@
+# Shlink on ePHPm + MariaDB.
+#
+#   INITIAL_API_KEY=change-me docker compose up -d
+#   curl -H "X-Api-Key: change-me" http://localhost:8080/rest/v3/short-urls
+#
+# Replaces: the official shlinkio/shlink image (RoadRunner) — same release,
+# same environment variables, per-request PHP on ePHPm instead.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-shlink
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # Same variable names as shlinkio/shlink. Full list:
+      # https://shlink.io/documentation/environment-variables/
+      DEFAULT_DOMAIN: ${DEFAULT_DOMAIN:-localhost:8080}   # the domain short URLs are built on
+      IS_HTTPS_ENABLED: ${IS_HTTPS_ENABLED:-false}
+      DB_DRIVER: maria
+      DB_HOST: db
+      DB_NAME: shlink
+      DB_USER: shlink
+      DB_PASSWORD: shlink
+      # First-start API key (only created while the key does not exist yet);
+      # leave empty and create one later with `docker compose exec ephpm shlink api-key:generate`.
+      INITIAL_API_KEY: ${INITIAL_API_KEY:-}
+      # GEOLITE_LICENSE_KEY: ...      # enables visitor geolocation (MaxMind account)
+      # TIMEZONE: UTC
+    volumes:
+      - data:/etc/shlink/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: shlink
+      MARIADB_USER: shlink
+      MARIADB_PASSWORD: shlink
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  data:
+  db-data:

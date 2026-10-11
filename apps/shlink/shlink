@@ -1,0 +1,5 @@
+#!/bin/sh
+# Shlink's CLI through the embedded PHP (the official image symlinks bin/cli
+# to /usr/local/bin/shlink; bin/cli has a `#!/usr/bin/env php` shebang and
+# there is no `php` binary in this image).
+exec ephpm php /etc/shlink/bin/cli "$@"

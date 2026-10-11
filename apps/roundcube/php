@@ -1,0 +1,4 @@
+#!/bin/sh
+# `php` on PATH → the embedded PHP CLI, so Roundcube's bin/*.sh scripts
+# (`#!/usr/bin/env php`) run as documented: `docker compose exec ephpm bin/cleandb.sh`.
+exec ephpm php "$@"

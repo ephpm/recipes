@@ -1,0 +1,34 @@
+# Roundcube Webmail on ePHPm — Roundcube's own SQLite database (its default),
+# plus the throwaway test mail server.
+#
+#   docker compose -f compose.sqlite.yml up -d
+#
+# No MariaDB: Roundcube keeps its own data (users, contacts, settings, cache)
+# in /var/roundcube/db/sqlite.db — the `state` volume — through pdo_sqlite.
+# Your mail stays on your IMAP server (see compose.yml about `mail`).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-roundcube
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      ROUNDCUBEMAIL_DB_TYPE: sqlite
+      ROUNDCUBEMAIL_DEFAULT_HOST: ${ROUNDCUBEMAIL_DEFAULT_HOST:-mail}
+      ROUNDCUBEMAIL_DEFAULT_PORT: ${ROUNDCUBEMAIL_DEFAULT_PORT:-3143}
+      ROUNDCUBEMAIL_SMTP_SERVER: ${ROUNDCUBEMAIL_SMTP_SERVER:-mail}
+      ROUNDCUBEMAIL_SMTP_PORT: ${ROUNDCUBEMAIL_SMTP_PORT:-3025}
+      ROUNDCUBEMAIL_PLUGINS: archive,zipdownload
+    volumes:
+      - state:/var/roundcube
+    restart: unless-stopped
+
+  mail:
+    image: docker.io/greenmail/standalone:2.1.14
+    environment:
+      GREENMAIL_OPTS: -Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled
+    restart: unless-stopped
+
+volumes:
+  state:

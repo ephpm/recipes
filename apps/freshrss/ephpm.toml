@@ -1,0 +1,59 @@
+# ePHPm configuration for FreshRSS — external database (PostgreSQL / MySQL)
+# or FreshRSS's own built-in SQLite.
+#
+# ePHPm is the web server + PHP runtime + session store; FreshRSS talks to
+# the database itself with PDO. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# FreshRSS's web root is the p/ directory; app/, lib/, data/ stay above it.
+document_root = "/var/www/FreshRSS/p"
+index_files = ["index.php", "index.html"]
+# FreshRSS's nginx reference config: try_files $uri $uri/ index.php
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 33554432            # 32 MiB (OPML/ZIP imports), same as the official image
+
+[server.static]
+# p/.htaccess: ExpiresDefault "access plus 1 month" for static assets
+cache_control = "public, max-age=2592000"
+
+[server.security]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+# Feed refreshes started from the UI can take a while on many feeds.
+max_execution_time = 120
+memory_limit = "256M"
+# Written by entrypoint.sh: date.timezone from the TZ environment variable
+# (the official image patches php.ini the same way).
+ini_file = "/run/ephpm/php.ini"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "32M"],
+    ["post_max_size", "32M"],
+    # PHP sessions in ePHPm's in-process KV store instead of files in /tmp.
+    ["session.save_handler", "ephpm"],
+    ["session.use_strict_mode", "1"],
+    # WORKAROUND: dns_get_record() never returns on ePHPm v0.11.3 (Linux) and
+    # FreshRSS calls it on every feed add/refresh. Disabling the native
+    # function lets dns-polyfill.php redefine it on top of getaddrinfo().
+    # Remove both lines once ePHPm is fixed — see issues/freshrss.md.
+    ["disable_functions", "dns_get_record"],
+    ["auto_prepend_file", "/etc/ephpm/dns-polyfill.php"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

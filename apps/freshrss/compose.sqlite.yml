@@ -1,0 +1,36 @@
+# FreshRSS on ePHPm — single container, FreshRSS's own built-in SQLite database.
+#
+#   docker compose -f compose.sqlite.yml up -d
+#
+# This is FreshRSS's default database (one SQLite file per user under
+# data/users/<user>/, via pdo_sqlite): no database server, nothing
+# experimental. Back up the `data` volume.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-freshrss
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      TZ: ${TZ:-UTC}
+      CRON_MIN: "2,32"
+      FRESHRSS_INSTALL: |-
+        --api-enabled
+        --db-type sqlite
+        --default-user admin
+        --language en
+      FRESHRSS_USER: |-
+        --api-password ${ADMIN_API_PASSWORD:-freshrss}
+        --email ${ADMIN_EMAIL:-admin@example.net}
+        --language en
+        --password ${ADMIN_PASSWORD:-freshrss}
+        --user admin
+    volumes:
+      - data:/var/www/FreshRSS/data
+      - extensions:/var/www/FreshRSS/extensions
+    restart: unless-stopped
+
+volumes:
+  data:
+  extensions:

@@ -1,0 +1,8 @@
+#!/bin/sh
+# `php` on PATH → the embedded PHP CLI, so FreshRSS's `#!/usr/bin/env php`
+# scripts (cli/*.php, app/actualize_script.php) run exactly as documented.
+#
+# The two -d flags are the same dns_get_record() workaround ephpm.toml applies
+# to the server (ePHPm v0.11.3's dns_get_record() never returns; FreshRSS
+# calls it when adding and refreshing feeds). See dns-polyfill.php.
+exec ephpm php -d disable_functions=dns_get_record -d auto_prepend_file=/etc/ephpm/dns-polyfill.php "$@"

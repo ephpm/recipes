@@ -1,0 +1,81 @@
+# Invoice Ninja v5 on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in with NINJA_ADMIN_EMAIL / NINJA_ADMIN_PASSWORD
+#
+# Replaces: the invoiceninja/invoiceninja (php-fpm) + nginx pair of the
+# official compose file; a Redis service if you ran one for cache/sessions.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-invoiceninja
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: &env
+      # The URL users open Invoice Ninja at (links, PDFs, emails).
+      APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      APP_DEBUG: "false"
+      # Invoice Ninja redirects to https:// unless told it is served over plain HTTP.
+      REQUIRE_HTTPS: "false"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ninja
+      DB_USERNAME: ninja
+      DB_PASSWORD: ninja
+      # First-run account (ninja:create-account); change the password.
+      NINJA_ADMIN_EMAIL: admin@example.com
+      NINJA_ADMIN_PASSWORD: Recipe-Pass-9731
+      MAIL_MAILER: log
+      # PDFs are rendered by Invoice Ninja's hosted service by default
+      # (PDF_GENERATOR=hosted_ninja); see the README for a local alternative.
+      # Cache and sessions default to the `file` driver (storage/framework).
+      # To keep them in ePHPm's in-process KV store instead, uncomment:
+      # CACHE_DRIVER: redis
+      # SESSION_DRIVER: redis
+      # REDIS_CLIENT: predis
+      # REDIS_HOST: 127.0.0.1
+    volumes:
+      - ninja-storage:/app/storage              # documents, logs, .env (APP_KEY)
+      - ninja-public:/app/public/storage        # public files (logos)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Recurring invoices, reminders and clean-ups run through the Laravel
+  # scheduler, which Invoice Ninja requires every minute.
+  scheduler:
+    image: recipes-invoiceninja
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    environment: *env
+    volumes:
+      - ninja-storage:/app/storage
+      - ninja-public:/app/public/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: ninja
+      MARIADB_USER: ninja
+      MARIADB_PASSWORD: ninja
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  ninja-storage:
+  ninja-public:
+  db-data:

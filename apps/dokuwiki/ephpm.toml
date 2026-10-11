@@ -1,0 +1,48 @@
+# ePHPm configuration for DokuWiki (flat-file; no database).
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php", "index.html"]
+# Stock DokuWiki URLs (doku.php?id=…, lib/exe/fetch.php?media=…), i.e.
+# `userewrite = 0`. The "nice URL" modes need regex rewrites (mode 1) or
+# PATH_INFO (mode 2), which ePHPm does not provide — keep userewrite at 0.
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.request]
+max_body_size = 33554432            # 32 MiB media uploads (keep in sync with the ini below)
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# The directories DokuWiki ships a "deny all" .htaccess for, plus the files
+# its .htaccess.dist hides. data/ holds every page and media file.
+blocked_paths = ["/bin/*", "/conf/*", "/data/*", "/inc/*", "/vendor/*",
+                 "/README", "/VERSION", "/COPYING", "/.git*"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "32M"],
+    ["post_max_size", "32M"],
+    # PHP sessions in ePHPm's in-process KV store instead of files in /tmp.
+    ["session.save_handler", "ephpm"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

@@ -1,0 +1,27 @@
+# DokuWiki on ePHPm — one container, no database (DokuWiki is flat-file).
+#
+#   docker compose up -d
+#   open http://localhost:8080/install.php   (EPHPM_PORT overrides the host port)
+#
+# Replaces: Apache/nginx + php-fpm. The four volumes hold everything
+# DokuWiki writes: pages/media/cache (data), configuration (conf), and
+# installed plugins and templates (lib/plugins, lib/tpl). Back up data + conf.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-dokuwiki
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    volumes:
+      - data:/var/www/html/data
+      - conf:/var/www/html/conf
+      - plugins:/var/www/html/lib/plugins
+      - tpl:/var/www/html/lib/tpl
+    restart: unless-stopped
+
+volumes:
+  data:
+  conf:
+  plugins:
+  tpl:

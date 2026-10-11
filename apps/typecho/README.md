@@ -13,9 +13,9 @@
 
 * **One process.** ePHPm serves the files and runs PHP; the rewrite to
   `index.php` is `[server] fallback`. Typecho computes its route from
-  `REQUEST_URI` itself, so both its default `/index.php/archives/1/`
-  permalinks and rewritten ones (`/archives/1/`, after enabling them in
-  Settings → Permalinks) work without `PATH_INFO`.
+  `REQUEST_URI` itself, so its default `/index.php/archives/1/` permalinks work without
+  `PATH_INFO`; rewritten ones (`/archives/1/`, Settings → Permalinks) go
+  through the same fallback (not exercised by `test.sh`).
 * **Installed on the first start** with Typecho's own CLI installer
   (`php install.php`), driven by the variables the `joyqi/typecho` image
   uses: `TYPECHO_SITE_URL`, `TYPECHO_DB_ADAPTER` (`Pdo_Mysql`,

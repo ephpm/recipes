@@ -1,0 +1,4 @@
+#!/bin/sh
+# `php` on PATH → the embedded PHP CLI, so phpBB's CLI runs as documented:
+# `docker compose exec ephpm php bin/phpbbcli.php cache:purge`.
+exec ephpm php "$@"

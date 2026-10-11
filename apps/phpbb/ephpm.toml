@@ -1,0 +1,48 @@
+# ePHPm configuration for phpBB.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+# docs/nginx.sample.conf: try_files $uri $uri/ @rewriteapp → /app.php. The
+# controller URLs look like /app.php/help/faq; nginx passes the tail as
+# PATH_INFO, ePHPm has none — but phpBB's Symfony request derives the path
+# from REQUEST_URI, so routing every non-file URL to app.php is enough.
+fallback = ["$uri", "$uri/", "/app.php?$query_string"]
+
+[server.request]
+max_body_size = 33554432            # 32 MiB attachments (keep in sync with the ini below)
+
+[server.static]
+cache_control = "public, max-age=604800"
+
+[server.security]
+# docs/nginx.sample.conf denies these outright (config, cache, uploaded
+# files served through download/file.php, the framework and vendor code).
+blocked_paths = ["/config.php", "/common.php", "/composer.*", "/cache/*", "/files/*",
+                 "/images/avatars/upload/*", "/includes/*", "/phpbb/*", "/store/*", "/vendor/*",
+                 "/install/*", "/bin/*", "/docs/*", "/.git*"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "32M"],
+    ["post_max_size", "32M"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

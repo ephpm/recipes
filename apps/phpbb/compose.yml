@@ -1,0 +1,63 @@
+# phpBB on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port — keep
+#                                 PHPBB_SERVER_PORT in sync with it)
+#
+# Replaces: nginx/Apache + php-fpm (phpBB has no official image). The first
+# start runs phpBB's CLI installer from the PHPBB_* variables below; the
+# resulting config.php lives in the `state` volume.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-phpbb
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      PHPBB_DB_HOST: db
+      PHPBB_DB_NAME: phpbb
+      PHPBB_DB_USER: phpbb
+      PHPBB_DB_PASSWORD: phpbb
+      PHPBB_BOARD_NAME: ${PHPBB_BOARD_NAME:-ePHPm Board}
+      PHPBB_ADMIN_USER: ${PHPBB_ADMIN_USER:-admin}
+      PHPBB_ADMIN_PASS: ${PHPBB_ADMIN_PASS:-phpbb-admin-password}
+      PHPBB_ADMIN_EMAIL: ${PHPBB_ADMIN_EMAIL:-admin@example.com}
+      # the public address phpBB builds links from (first start only; later in the ACP)
+      PHPBB_SERVER_PROTOCOL: ${PHPBB_SERVER_PROTOCOL:-http://}
+      PHPBB_SERVER_NAME: ${PHPBB_SERVER_NAME:-localhost}
+      PHPBB_SERVER_PORT: ${PHPBB_SERVER_PORT:-8080}
+    volumes:
+      - state:/var/phpbb
+      - ext:/var/www/html/ext
+      - files:/var/www/html/files
+      - store:/var/www/html/store
+      - avatars:/var/www/html/images/avatars/upload
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: phpbb
+      MARIADB_USER: phpbb
+      MARIADB_PASSWORD: phpbb
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  state:
+  ext:
+  files:
+  store:
+  avatars:
+  db-data:

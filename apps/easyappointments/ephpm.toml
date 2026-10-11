@@ -41,6 +41,8 @@ multi_tenant_hardening = false
 max_execution_time = 120
 memory_limit = "256M"
 ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
     ["upload_max_filesize", "100M"],   # the official image's 99-overrides.ini
     ["post_max_size", "100M"],
     ["date.timezone", "UTC"],

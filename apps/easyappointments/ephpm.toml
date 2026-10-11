@@ -1,0 +1,54 @@
+# ePHPm configuration for Easy!Appointments — external database (MySQL/MariaDB).
+#
+# Easy!Appointments connects straight to DB_HOST with mysqli; ePHPm is the web
+# server + PHP runtime. Every key is documented at
+# https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php", "index.html"]
+# nginx: try_files $uri $uri/ /index.php?$args. Also catches the app's own
+# /index.php/<controller> links: CodeIgniter strips SCRIPT_NAME from
+# REQUEST_URI itself, so no PATH_INFO splitting is needed.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 134217728           # 128 MiB, the upstream nginx client_max_body_size
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# What the shipped .htaccess files and the nginx config keep off the web:
+# application code, the framework, vendor, sessions/logs/backups, config.php.
+blocked_paths = [
+    "/application/*",
+    "/system/*",
+    "/vendor/*",
+    "/storage/*",
+    "/config.php",
+    "/config-sample.php",
+    "/composer.*",
+]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [
+    ["upload_max_filesize", "100M"],   # the official image's 99-overrides.ini
+    ["post_max_size", "100M"],
+    ["date.timezone", "UTC"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container (OPcache timestamp
+# validation is off under `ephpm serve`; reset after changing PHP files).
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

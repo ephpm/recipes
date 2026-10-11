@@ -1,0 +1,51 @@
+# Easy!Appointments on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port; set
+#                                 BASE_URL to match the URL you actually use)
+#
+# Replaces: nginx + php-fpm (the upstream docker-compose.yml) or the official
+# php:8.2-apache image.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-easyappointments
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # Same variable names as alextselegidis/easyappointments:latest.
+      BASE_URL: ${BASE_URL:-http://localhost:8080}
+      DB_HOST: db
+      DB_NAME: easyappointments
+      DB_USERNAME: easyappointments
+      DB_PASSWORD: easyappointments
+      # LANGUAGE: english
+      # DEBUG_MODE: "FALSE"
+      # MAIL_PROTOCOL: smtp   # + MAIL_SMTP_HOST/USER/PASS/PORT/CRYPTO, MAIL_FROM_ADDRESS/NAME
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: easyappointments
+      MARIADB_USER: easyappointments
+      MARIADB_PASSWORD: easyappointments
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  storage:
+  db-data:

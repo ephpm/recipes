@@ -1,0 +1,57 @@
+# Matomo on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: Apache + mod_php (the matomo:apache image) or nginx + php-fpm.
+# Same variables as the official image: MATOMO_DATABASE_HOST / _USERNAME /
+# _PASSWORD / _DBNAME / _TABLES_PREFIX / _ADAPTER prefill the web installer
+# (and the *_FILE secret variants work). The first visit runs the installer.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-matomo
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      MATOMO_DATABASE_HOST: db
+      MATOMO_DATABASE_USERNAME: matomo
+      MATOMO_DATABASE_PASSWORD: matomo
+      MATOMO_DATABASE_DBNAME: matomo
+      # Archive reports every hour from the console instead of on page views
+      # (Matomo's recommendation for anything but tiny sites). Empty = off.
+      # MATOMO_ARCHIVE_INTERVAL: "3600"
+    volumes:
+      - config:/var/www/html/config
+      - plugins:/var/www/html/plugins
+      - user:/var/www/html/misc/user
+      - tmp:/var/www/html/tmp
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    command: --max-allowed-packet=64MB
+    environment:
+      MARIADB_DATABASE: matomo
+      MARIADB_USER: matomo
+      MARIADB_PASSWORD: matomo
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  config:
+  plugins:
+  user:
+  tmp:
+  db-data:

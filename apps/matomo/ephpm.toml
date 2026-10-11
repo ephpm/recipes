@@ -1,0 +1,58 @@
+# ePHPm configuration for Matomo — external database (MySQL/MariaDB).
+#
+# Matomo connects to MATOMO_DATABASE_HOST itself with PDO; ePHPm is the web
+# server + PHP runtime. Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+# The official nginx config: `try_files $uri $uri/ =404` — no rewrites.
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.request]
+max_body_size = 67108864            # 64 MiB (log imports / plugin uploads)
+
+[server.response]
+# Headers the official nginx config adds on every response.
+headers = [
+    ["Referrer-Policy", "origin"],
+    ["X-Content-Type-Options", "nosniff"],
+]
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# The official nginx config executes only index.php, matomo.php, piwik.php and
+# js/index.php, serves static assets from anywhere, and refuses the rest:
+# config/ tmp/ core/ lang/ libs/ vendor/ node_modules/ and every other .php.
+blocked_paths = ["/config/*", "/tmp/*", "/core/*", "/lang/*", "/libs/*", "/vendor/*", "/node_modules/*",
+                 "/console", "/console.php", "/DIObject.php", "/LegacyAutoloader.php",
+                 "/plugins/*.php", "/plugins/*/*.php", "/plugins/*/*/*.php", "/plugins/*/*/*/*.php",
+                 "/misc/*.php", "/misc/*/*.php", "/.git*"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+# Reports and archiving from the UI can be slow on big sites.
+max_execution_time = 120
+memory_limit = "512M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "64M"],
+    ["post_max_size", "64M"],
+    ["always_populate_raw_post_data", "-1"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

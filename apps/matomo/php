@@ -1,0 +1,4 @@
+#!/bin/sh
+# `php` on PATH → the embedded PHP CLI, so Matomo's `./console` (`#!/usr/bin/env php`)
+# runs as documented: `docker compose exec ephpm ./console core:archive`.
+exec ephpm php "$@"

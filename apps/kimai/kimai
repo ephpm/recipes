@@ -1,0 +1,6 @@
+#!/bin/sh
+# Kimai's Symfony console through the embedded PHP
+# (`docker compose exec ephpm kimai kimai:user:create ...`).
+# memory_limit=-1: the official image runs the console with its own
+# php-cli.ini (memory_limit=-1); cache warm-up needs more than 128M.
+exec ephpm php -d memory_limit=-1 /opt/kimai/bin/console "$@"

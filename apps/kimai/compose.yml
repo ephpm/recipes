@@ -1,0 +1,50 @@
+# Kimai on ePHPm + MariaDB.
+#
+#   ADMINMAIL=admin@example.com ADMINPASS=change-me docker compose up -d
+#   open http://localhost:8080      (log in as admin / change-me)
+#
+# Replaces: kimai/kimai2:fpm + nginx (or kimai/kimai2:apache).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-kimai
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # Same variable names as kimai/kimai2.
+      DATABASE_URL: mysql://kimai:kimai@db:3306/kimai?charset=utf8mb4&serverVersion=11.4.0-MariaDB
+      # First-start admin account (only created while no "admin" user exists)
+      ADMINMAIL: ${ADMINMAIL:-admin@example.com}
+      ADMINPASS: ${ADMINPASS:-}
+      TRUSTED_PROXIES: 127.0.0.1
+      # TRUSTED_HOSTS: kimai.example.com
+      MAILER_FROM: kimai@example.com
+      MAILER_URL: null://localhost
+      # APP_SECRET: generated once into the var volume when unset
+    volumes:
+      - var:/opt/kimai/var
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: kimai
+      MARIADB_USER: kimai
+      MARIADB_PASSWORD: kimai
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  var:
+  db-data:

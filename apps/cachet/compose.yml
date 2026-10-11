@@ -1,0 +1,80 @@
+# Cachet 3 on ePHPm + MariaDB (+ the scheduler and the queue worker).
+#
+#   CACHET_ADMIN_EMAIL=you@example.com CACHET_ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080           the status page
+#   open http://localhost:8080/dashboard the admin dashboard
+#
+# Replaces: Cachet's nginx + php-fpm image (supervisord running the
+# scheduler and queue worker alongside).
+
+x-cachet: &cachet
+  image: recipes-cachet
+  environment:
+    # The URL users open the status page at (links and assets are built from it).
+    APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+    APP_ENV: production
+    APP_DEBUG: "false"
+    DB_CONNECTION: mariadb
+    DB_HOST: db
+    DB_PORT: 3306
+    DB_DATABASE: cachet
+    DB_USERNAME: cachet
+    DB_PASSWORD: cachet
+    LOG_CHANNEL: stderr
+    MAIL_MAILER: log
+    # Cachet phones home with an anonymous beacon unless this is false.
+    CACHET_BEACON: "false"
+    # The first admin, created once on first start.
+    CACHET_ADMIN_EMAIL: ${CACHET_ADMIN_EMAIL:-}
+    CACHET_ADMIN_PASSWORD: ${CACHET_ADMIN_PASSWORD:-}
+  volumes:
+    - storage:/app/storage      # .env (APP_KEY), logs, uploaded logos
+
+services:
+  ephpm:
+    <<: *cachet
+    build: .
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Scheduled tasks (publishing scheduled maintenance, component checks).
+  scheduler:
+    <<: *cachet
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  # Subscriber notifications and webhooks go through the database queue.
+  queue:
+    <<: *cachet
+    command: ["ephpm", "php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: cachet
+      MARIADB_USER: cachet
+      MARIADB_PASSWORD: cachet
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  storage:
+  db-data:

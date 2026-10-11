@@ -1,0 +1,50 @@
+# Cachet 3 on ePHPm with Cachet's own SQLite database — no database server.
+#
+#   CACHET_ADMIN_EMAIL=you@example.com CACHET_ADMIN_PASSWORD=change-me \
+#     docker compose -f compose.sqlite.yml up -d
+#
+# The SQLite file lives in the storage volume (storage/database.sqlite),
+# shared with the scheduler and the queue worker.
+
+x-cachet: &cachet
+  image: recipes-cachet
+  environment:
+    APP_URL: ${APP_URL:-http://localhost:${EPHPM_PORT:-8080}}
+    APP_ENV: production
+    APP_DEBUG: "false"
+    DB_CONNECTION: sqlite
+    DB_DATABASE: /app/storage/database.sqlite
+    LOG_CHANNEL: stderr
+    MAIL_MAILER: log
+    CACHET_BEACON: "false"
+    CACHET_ADMIN_EMAIL: ${CACHET_ADMIN_EMAIL:-}
+    CACHET_ADMIN_PASSWORD: ${CACHET_ADMIN_PASSWORD:-}
+  volumes:
+    - storage:/app/storage      # database.sqlite, .env (APP_KEY), logs, uploads
+
+services:
+  ephpm:
+    <<: *cachet
+    build: .
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  scheduler:
+    <<: *cachet
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run; sleep 60; done"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  queue:
+    <<: *cachet
+    command: ["ephpm", "php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  storage:

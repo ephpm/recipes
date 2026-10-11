@@ -1,0 +1,43 @@
+# ePHPm configuration for Flarum (MySQL/MariaDB database).
+#
+# Flarum connects to its database itself (pdo_mysql); ePHPm is the web server
+# + PHP runtime. Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# The skeleton's web root is public/; config.php, vendor/ and storage/ sit above it.
+document_root = "/app/public"
+index_files = ["index.php"]
+# Flarum's .nginx.conf: try_files $uri $uri/ /index.php?$query_string
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 10485760            # 10 MiB — avatar, logo and favicon uploads
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# Nothing in the asset directory (compiled CSS/JS, avatars) is meant to execute.
+blocked_paths = ["/assets/*.php", "/assets/*/*.php"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+    ["upload_max_filesize", "10M"],
+    ["post_max_size", "10M"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` can reach the in-process store.
+# Not published outside the container.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

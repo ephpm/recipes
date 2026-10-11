@@ -1,0 +1,31 @@
+# Flarum on ePHPm — single container on SQLite (a database Flarum 2 supports
+# natively, through pdo_sqlite compiled into ePHPm). Not ePHPm's embedded
+# database: Flarum opens the file itself.
+#
+#   docker compose -f compose.sqlite.yml up -d
+#   open http://localhost:8080   (keep FORUM_URL in sync with EPHPM_PORT)
+
+services:
+  ephpm:
+    build: .
+    image: recipes-flarum
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      FORUM_URL: ${FORUM_URL:-http://localhost:8080}
+      DB_DRIVER: sqlite
+      DB_NAME: /data/flarum.sqlite            # next to config.php in the data volume
+      FLARUM_ADMIN_USER: ${FLARUM_ADMIN_USER:-admin}
+      FLARUM_ADMIN_PASS: ${FLARUM_ADMIN_PASS:-change-me-Flarum-9731}
+      FLARUM_ADMIN_MAIL: ${FLARUM_ADMIN_MAIL:-admin@example.com}
+      FLARUM_TITLE: Flarum on ePHPm
+    volumes:
+      - flarum-data:/data
+      - flarum-storage:/app/storage
+      - flarum-assets:/app/public/assets
+    restart: unless-stopped
+
+volumes:
+  flarum-data:
+  flarum-storage:
+  flarum-assets:

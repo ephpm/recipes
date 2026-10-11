@@ -1,0 +1,58 @@
+# Flarum on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port — keep
+#                                 FORUM_URL in sync with it)
+#
+# Replaces: nginx + php-fpm (the mondedie/flarum and crazymax/flarum images).
+# Same variable names as mondedie/flarum.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-flarum
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      FORUM_URL: ${FORUM_URL:-http://localhost:8080}   # the public URL; links and cookies are built from it
+      DB_DRIVER: mariadb      # "mysql" for MySQL 8; MariaDB needs its own driver (Flarum casts JSON differently)
+      DB_HOST: db
+      DB_NAME: flarum
+      DB_USER: flarum
+      DB_PASS: flarum
+      # DB_PREF: flarum_
+      # First-start admin account:
+      FLARUM_ADMIN_USER: ${FLARUM_ADMIN_USER:-admin}
+      FLARUM_ADMIN_PASS: ${FLARUM_ADMIN_PASS:-change-me-Flarum-9731}
+      FLARUM_ADMIN_MAIL: ${FLARUM_ADMIN_MAIL:-admin@example.com}
+      FLARUM_TITLE: Flarum on ePHPm
+    volumes:
+      - flarum-data:/data                     # config.php
+      - flarum-storage:/app/storage           # cache, sessions, logs
+      - flarum-assets:/app/public/assets      # compiled CSS/JS, avatars, logo
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: flarum
+      MARIADB_USER: flarum
+      MARIADB_PASSWORD: flarum
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  flarum-data:
+  flarum-storage:
+  flarum-assets:
+  db-data:

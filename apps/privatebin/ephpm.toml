@@ -1,0 +1,54 @@
+# ePHPm configuration for PrivateBin (flat-file; no database).
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# The web root holds index.php + static assets only; lib/, tpl/, vendor/, cfg/
+# and the pastes live under /srv (index.php's PATH), like the official image.
+document_root = "/var/www"
+index_files = ["index.php", "index.html"]
+# .docker site.conf: try_files $uri $uri/ /index.php$is_args$args
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 10485760            # 10 MiB — keep in sync with [main] sizelimit in conf.php
+
+[server.static]
+# site.conf: no-transform tells CDNs not to rewrite the files (SRI).
+cache_control = "public, max-age=3600, must-revalidate, no-transform"
+
+[server.response]
+# The hardening headers nginx adds in the official image. PrivateBin sets the
+# same ones (plus its CSP) on its own responses.
+headers = [
+    ["Cross-Origin-Embedder-Policy", "require-corp"],
+    ["Cross-Origin-Resource-Policy", "same-origin"],
+    ["Referrer-Policy", "no-referrer"],
+    ["X-Content-Type-Options", "nosniff"],
+    ["X-Frame-Options", "deny"],
+]
+
+[server.security]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "128M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "10M"],
+    ["post_max_size", "10M"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

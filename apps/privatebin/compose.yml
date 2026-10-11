@@ -1,0 +1,23 @@
+# PrivateBin on ePHPm — one container, no database (pastes are files).
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: nginx + php-fpm + s6 (the privatebin/nginx-fpm-alpine image).
+# Pastes, the server salt and the traffic limiter live in the `data` volume
+# (/srv/data, as in the official image). To customise PrivateBin, mount your
+# own conf.php at /srv/cfg/conf.php (see conf.php here for the layout).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-privatebin
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    volumes:
+      - data:/srv/data
+      # - ./conf.php:/srv/cfg/conf.php:ro
+    restart: unless-stopped
+
+volumes:
+  data:

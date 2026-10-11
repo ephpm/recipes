@@ -82,9 +82,7 @@ previews and small sites; plugins that rely on MySQL-only SQL may misbehave.
   the bundled `wp-config.php` honours `X-Forwarded-Proto`.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default). After
   updating plugins or core from the admin UI run
-  `docker compose exec ephpm ephpm cache reset` (or restart the container) so
-  the new code is picked up — the loopback RESP listener in `ephpm.toml`
-  exists for exactly this.
+  `docker compose restart ephpm` so the new code is picked up (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * Cron: WordPress's pseudo-cron runs on page views as usual. For a real
   schedule add a host cron entry running
   `docker compose exec -T ephpm wp cron event run --due-now`.

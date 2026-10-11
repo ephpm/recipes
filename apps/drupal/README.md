@@ -50,7 +50,7 @@ docker compose exec ephpm drush status
 docker compose exec ephpm drush cache:rebuild
 docker compose exec ephpm drush recipe core/recipes/standard_responsive_images
 docker compose exec ephpm drush config:export     # into sites/default/files/config_* by default
-docker compose exec ephpm ephpm cache reset       # after changing PHP code in the image
+docker compose restart ephpm                      # after changing PHP code in the container
 ```
 
 Modules and themes are added the Composer way — in your own project's
@@ -77,7 +77,7 @@ in the Dockerfile's first stage), then `drush pm:install <module>`.
   real schedule run `drush cron` from a host cron or an extra service.
 * OPcache runs with timestamp validation off (`ephpm serve` default). The
   code lives in the image, so this only matters if you edit PHP inside a
-  running container — then `ephpm cache reset`. Twig templates compile to
+  running container — then `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`). Twig templates compile to
   new file names and are unaffected.
 
 ## Known limitations

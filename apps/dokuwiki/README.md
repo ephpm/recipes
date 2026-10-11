@@ -42,7 +42,7 @@ refuses to run again once `conf/local.php` exists; it tells you to delete
 ```bash
 docker compose exec ephpm php bin/indexer.php -c        # rebuild the search index
 docker compose exec ephpm php bin/plugin.php list       # installed plugins
-docker compose exec ephpm ephpm cache reset             # after installing plugins/templates
+docker compose restart ephpm                            # after installing plugins/templates (reloads PHP code)
 docker compose exec ephpm ephpm kv keys 'session:*'     # live sessions
 ```
 
@@ -65,8 +65,8 @@ docker compose exec ephpm ephpm kv keys 'session:*'     # live sessions
 * Behind a TLS-terminating proxy set `[server.security] trusted_proxies`;
   DokuWiki's `baseurl` config option covers a different public URL.
 * OPcache runs with timestamp validation off (`ephpm serve` default): run
-  `docker compose exec ephpm ephpm cache reset` or restart after installing
-  or updating plugins and templates from the Extension Manager.
+  `docker compose restart ephpm` after installing or updating plugins and templates from the
+  Extension Manager (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * The daily cleanup DokuWiki's docs suggest (`bin/cleanup.sh`, cache and
   attic pruning) is not scheduled; run `php bin/…` from a host cron if you
   need it.

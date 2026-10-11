@@ -47,7 +47,7 @@ short links are built from it and the login cookie is scoped to its host.
 # the API (signature token from Admin → Tools)
 curl "http://localhost:8080/yourls-api.php" \
   --data "signature=TOKEN&action=shorturl&url=https://example.com/&format=json"
-docker compose exec ephpm ephpm cache reset   # after changing PHP files in user/
+docker compose restart ephpm                  # after changing PHP files in user/ (reloads PHP code)
 ```
 
 ### No embedded-database variant
@@ -78,7 +78,7 @@ a real MySQL/MariaDB.
 * Plugins go in the `user` volume (`user/plugins/<name>/plugin.php`) and
   are activated from Admin → Plugins, as usual. OPcache runs with timestamp
   validation off (`ephpm serve` default), so after adding or editing plugin
-  PHP run `docker compose exec ephpm ephpm cache reset` or restart.
+  PHP run `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * YOURLS does not use PHP sessions (login is a signed cookie), so there is
   nothing to move to the KV store.
 

@@ -44,7 +44,7 @@ up `data`.
 
 ```bash
 docker compose exec ephpm ephpm kv keys 'session:*'   # live sessions
-docker compose exec ephpm ephpm cache reset            # after editing PHP in the container
+docker compose restart ephpm                           # after editing PHP in the container (reloads PHP code)
 docker compose logs ephpm                              # PHP errors land here
 ```
 
@@ -71,7 +71,7 @@ docker compose logs ephpm                              # PHP errors land here
   recipe uses `blocked_paths` instead.
 * OPcache runs with timestamp validation off (`ephpm serve` default): after
   changing PHP files inside the container run
-  `docker compose exec ephpm ephpm cache reset` or restart.
+  `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * The REST API (`/api/v1/…`, JWT in the `Authorization` header) routes
   through `index.php` like every other path, but the smoke test does not
   exercise it — untested.

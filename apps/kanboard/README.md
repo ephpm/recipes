@@ -47,7 +47,7 @@ database migrations on the first request. Plugins installed from the UI
 ```bash
 docker compose exec ephpm ./cli cronjob          # run the daily job now
 docker compose exec ephpm ./cli user:reset-password admin
-docker compose exec ephpm ephpm cache reset      # after adding/updating plugins
+docker compose restart ephpm                     # after adding/updating plugins (reloads PHP code)
 ```
 
 ### Single container, Kanboard's own SQLite
@@ -94,8 +94,7 @@ well. Tracked in [`issues/kanboard.md`](../../issues/kanboard.md). Use
   and Kanboard's `TRUSTED_PROXY_NETWORKS` / `TRUSTED_PROXY_HEADERS` if you
   use its reverse-proxy authentication.
 * OPcache runs with timestamp validation off (`ephpm serve` default): run
-  `docker compose exec ephpm ephpm cache reset` or restart after plugin
-  installs/updates. The official image uses `opcache.jit = tracing`; ePHPm
+  `docker compose restart ephpm` after plugin installs/updates (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`). The official image uses `opcache.jit = tracing`; ePHPm
   keeps the JIT off by default (see its config reference for why).
 * `./cli` under `ephpm php` prints `PHP Deprecated: Constant
   PDO::MYSQL_ATTR_INIT_COMMAND is deprecated since 8.5` (from PicoDb) on the

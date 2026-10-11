@@ -54,7 +54,7 @@ To manage an existing server, delete the `db` service and set
 
 ```bash
 docker compose exec ephpm ephpm kv keys 'session:*'   # live sessions
-docker compose exec ephpm ephpm cache reset            # after editing PHP in the container
+docker compose restart ephpm                           # after editing PHP in the container (reloads PHP code)
 ```
 
 ## Files

@@ -48,7 +48,7 @@ seed the board's cookie/URL settings; change them later in the ACP.
 docker compose exec ephpm php bin/phpbbcli.php cache:purge
 docker compose exec ephpm php bin/phpbbcli.php extension:enable vendor/name
 docker compose exec ephpm php bin/phpbbcli.php config:get sitename
-docker compose exec ephpm ephpm cache reset       # after installing extensions/styles
+docker compose restart ephpm                      # after installing extensions/styles (reloads PHP code)
 ```
 
 Variables (first start only, except the DB ones): `PHPBB_DB_HOST`,
@@ -83,8 +83,7 @@ Variables (first start only, except the DB ones): `PHPBB_DB_HOST`,
   the system cron mode run `php bin/phpbbcli.php cron:run` from a host
   cron or an extra compose service.
 * OPcache runs with timestamp validation off (`ephpm serve` default): run
-  `docker compose exec ephpm ephpm cache reset` or restart after
-  installing extensions or styles.
+  `docker compose restart ephpm` after installing extensions or styles (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 
 ## Known limitations
 

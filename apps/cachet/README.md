@@ -79,8 +79,8 @@ docker compose exec ephpm ephpm php artisan tinker --execute \
   URL and `CACHET_TRUSTED_PROXIES`, plus `[server.security]
   trusted_proxies` in `ephpm.toml`.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default).
-  After changing PHP files run `docker compose exec ephpm ephpm cache reset`
-  or restart the container.
+  After changing PHP files run `docker compose restart ephpm`
+  (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 
 ## Known limitations
 

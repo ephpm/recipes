@@ -44,10 +44,12 @@ warn when the server it talks to is not watching.
 
 ### Workaround
 
-The Nextcloud recipe sets `[opcache] cluster_invalidation = true`. Other
-recipes' READMEs (yourls, bookstack, yii2, …) recommend `ephpm cache reset`
-without it; until ePHPm is fixed, restarting the container is what actually
-refreshes PHP code there.
+The Nextcloud recipe sets `[opcache] cluster_invalidation = true`. Every
+other recipe's README tells users to run `docker compose restart ephpm`
+after changing PHP code instead (verified against the v0.11.3 source and the
+repro above, 2026-10-11). The `[kv.redis_compat]` comments in those
+recipes' `ephpm.toml` files still mention `ephpm cache reset`; the listener
+is still useful for `ephpm kv ...`.
 
 ## 2. `/.well-known/*` is always refused by `hidden_files`
 

@@ -55,7 +55,7 @@ into `LocalSettings.php`): `MEDIAWIKI_SITE_NAME`, `MEDIAWIKI_SITE_SERVER`,
 docker compose exec ephpm php maintenance/run.php update --quick   # after upgrading the image
 docker compose exec ephpm php maintenance/run.php runJobs          # the job queue
 docker compose exec ephpm php maintenance/run.php showSiteStats
-docker compose exec ephpm ephpm cache reset                         # after editing PHP / adding extensions
+docker compose restart ephpm                                        # after editing PHP / adding extensions (reloads PHP code)
 ```
 
 ### Single container, MediaWiki's own SQLite

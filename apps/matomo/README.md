@@ -52,7 +52,7 @@ Afterwards:
 docker compose exec ephpm ./console core:archive --url=http://localhost:8080/   # archive now
 docker compose exec ephpm ./console plugin:activate CustomDimensions
 docker compose exec ephpm ./console core:update                                 # after upgrading the image
-docker compose exec ephpm ephpm cache reset                                     # after plugin installs/updates
+docker compose restart ephpm                                                    # after plugin installs/updates (reloads PHP code)
 ```
 
 ## Files
@@ -77,8 +77,7 @@ docker compose exec ephpm ephpm cache reset                                     
 * GeoIP: Matomo's `GeoIp2` plugin downloads databases into `misc/` through
   the UI/console (`./console geoip2:update`); nothing is bundled.
 * OPcache runs with timestamp validation off (`ephpm serve` default): run
-  `docker compose exec ephpm ephpm cache reset` or restart after installing
-  or updating plugins.
+  `docker compose restart ephpm` after installing or updating plugins (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 
 ## Known limitations
 

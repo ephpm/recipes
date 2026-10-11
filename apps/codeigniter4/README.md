@@ -54,8 +54,9 @@ yet; see `UPSTREAM.md` for the proposed addition to CI4's docs.
 
 * `[server.security] blocked_paths` keeps `/app`, `/writable`, `/vendor` and
   `.env` off the web even though only `public/` is the document root.
-* After deploying new code run `docker compose exec ephpm ephpm cache reset`
-  or restart (OPcache timestamp validation is off under `ephpm serve`).
+* After deploying new code run `docker compose restart ephpm` (OPcache timestamp validation is off
+  under `ephpm serve`; `ephpm cache reset` is a no-op on a single node in
+  v0.11.3, `issues/nextcloud.md`).
 
 ## Known limitations
 

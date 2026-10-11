@@ -90,8 +90,7 @@ docker compose logs ephpm                                    # PHP errors and eP
   `APP_URL` to the public `https://` URL.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default).
   After changing PHP files inside a running container run
-  `docker compose exec ephpm ephpm cache reset` or restart it — the loopback
-  RESP listener in `ephpm.toml` exists for that.
+  `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * Search uses LinkAce's built-in database search (`APP_SEARCH_DRIVER=database`).
   Meilisearch/Typesense work as upstream documents if you add the service and
   the `MEILISEARCH_*` variables.

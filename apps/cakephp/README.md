@@ -48,8 +48,9 @@ curl -b jar -H "X-CSRF-Token: <token>" -d name=me -d message=hi http://localhost
   until you replace it; `DEBUG=true` shows the stock landing page.
 * `blocked_paths` keeps `/config`, `/src`, `/tmp`, `/logs` and `/vendor`
   off the web even though only `webroot/` is served.
-* After deploying new code run `docker compose exec ephpm ephpm cache reset`
-  or restart (OPcache timestamp validation is off under `ephpm serve`).
+* After deploying new code run `docker compose restart ephpm` (OPcache timestamp validation is off
+  under `ephpm serve`; `ephpm cache reset` is a no-op on a single node in
+  v0.11.3, `issues/nextcloud.md`).
 
 ## Known limitations
 

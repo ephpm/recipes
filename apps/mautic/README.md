@@ -80,7 +80,7 @@ docker compose exec ephpm ephpm php bin/console cache:clear   # the same, withou
   (Redis/RabbitMQ) if you have one.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default).
   After installing a plugin or theme run
-  `docker compose exec ephpm ephpm cache reset` (or restart the container).
+  `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * Behind a TLS-terminating proxy set `[server.security] trusted_proxies`
   and an `https://` `MAUTIC_SITE_URL`.
 

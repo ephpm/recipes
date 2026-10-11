@@ -82,7 +82,7 @@ docker compose logs ephpm                                          # PHP errors 
   best terminated by a proxy in front of ePHPm (or ePHPm's `[server.tls]`).
 * OPcache runs with timestamp validation off (ePHPm's `serve` default).
   After installing plugins or changing PHP files run
-  `docker compose exec ephpm ephpm cache reset` or restart the container.
+  `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 
 ## Known limitations
 

@@ -90,7 +90,7 @@ docker compose logs ephpm                                     # Laravel logs to 
   URL and `[server.security] trusted_proxies` in `ephpm.toml`.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default).
   After installing an extension package run
-  `docker compose exec ephpm ephpm cache reset` or restart the container.
+  `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 
 ## Known limitations
 

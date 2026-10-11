@@ -68,7 +68,7 @@ docker compose exec ephpm kimai kimai:plugin:install    # after dropping a plugi
   (ePHPm) and `TRUSTED_PROXIES` (Kimai) to the proxy address.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default). After
   installing a plugin run `kimai kimai:reload` **and**
-  `ephpm cache reset` (or restart the container).
+  `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * Mail: `MAILER_URL=null://localhost` by default; set an SMTP DSN
   (`smtp://user:pass@host:587`) for notifications.
 * Cron: Kimai has no mandatory cron jobs.

@@ -100,8 +100,8 @@ Run them on the same image (see the commented `queue` service in
 
 ## Configuration notes
 
-* After deploying new code, run `docker compose exec ephpm ephpm cache reset`
-  or restart: ePHPm's `serve` mode keeps OPcache timestamp validation off.
+* After deploying new code, run `docker compose restart ephpm`: ePHPm's `serve` mode keeps
+  OPcache timestamp validation off (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * `[php] max_execution_time = 60` is enforced per request on Linux;
   `[server.timeouts] request` (default 300 s) is the outer backstop.
 * The three `[server.security]` sandbox flags are set to `false` explicitly

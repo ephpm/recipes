@@ -83,7 +83,7 @@ docker compose logs ephpm                                        # PHP errors an
   settings; the image has no `sendmail`, so use SMTP.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default). After
   changing PHP files (custom templates) run
-  `docker compose exec ephpm ephpm cache reset` or restart the container.
+  `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * Cron: InvoicePlane's recurring invoices run on a cron hitting
   `/invoices/cron/recur?cron_key=<key>` (Settings > General). Add a host
   cron entry with `curl` for that URL.

@@ -55,7 +55,7 @@ mailbox credentials.
 ```bash
 docker compose exec ephpm bin/cleandb.sh                 # Roundcube's cron job
 docker compose exec ephpm bin/gc.sh
-docker compose exec ephpm ephpm cache reset              # after editing PHP / adding plugins
+docker compose restart ephpm                             # after editing PHP / adding plugins (reloads PHP code)
 ```
 
 ### Single container, Roundcube's own SQLite

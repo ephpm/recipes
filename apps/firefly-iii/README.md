@@ -88,7 +88,7 @@ docker compose logs ephpm                                                   # PH
   database.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default).
   After changing PHP files inside a running container run
-  `docker compose exec ephpm ephpm cache reset` or restart it.
+  `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * The Firefly III Data Importer is a separate application (own image); run
   it as another service pointed at this one's URL, as upstream documents.
 

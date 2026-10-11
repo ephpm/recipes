@@ -103,8 +103,8 @@ volume. This is Shlink's own small-install option.
 * `[server.timeouts]` and `[php] max_execution_time = 60` are enough for
   the API; raise them if you import large lists with `short-url:import`.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default).
-  After an image upgrade the container restarts anyway; `ephpm cache reset`
-  is there for in-place edits.
+  After an image upgrade the container restarts anyway; after in-place edits
+  run `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 
 ## Known limitations
 

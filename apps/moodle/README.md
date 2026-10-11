@@ -63,7 +63,7 @@ before the first start).
 docker compose exec ephpm php admin/cli/cfg.php --name=release
 docker compose exec ephpm php admin/cli/purge_caches.php
 docker compose exec ephpm php admin/cli/maintenance.php --enable
-docker compose exec ephpm ephpm cache reset     # after adding or upgrading plugins
+docker compose restart ephpm                    # after adding or upgrading plugins (reloads PHP code)
 ```
 
 ## Files
@@ -83,7 +83,8 @@ docker compose exec ephpm ephpm cache reset     # after adding or upgrading plug
   etc.) and rebuild, then `admin/cli/upgrade.php` runs on the next start.
   Installing plugins from the web UI writes into the code tree, which is in
   the image, not a volume — and OPcache does not check timestamps under
-  `ephpm serve`, so run `ephpm cache reset` after any code change.
+  `ephpm serve`, so run `docker compose restart ephpm` after any code change
+  (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * Sessions are Moodle's file sessions in `moodledata`. Moodle can use Redis
   for sessions/MUC; ePHPm's built-in KV is not wired up here.
 * On PHP 8.5 the CLI prints deprecation notices (`xml_parser_free()`,

@@ -58,8 +58,8 @@ is baked into the image; real environment variables win over `.env`.
 * `curl`-style clients: Symfony 7.2+ stateless CSRF (`stateless_token_ids`)
   accepts a same-origin `Origin`/`Referer` header when the JS double-submit
   cookie is absent — browsers always send one; `test.sh` adds it explicitly.
-* After deploying new code run `docker compose exec ephpm ephpm cache reset`
-  or restart; ePHPm's `serve` mode keeps OPcache timestamp validation off.
+* After deploying new code run `docker compose restart ephpm`; ePHPm's `serve` mode keeps
+  OPcache timestamp validation off (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * The `[server.security]` sandbox flags are set `false` explicitly (they act
   only in ePHPm's multi-tenant mode); `blocked_paths` keeps `/var`, `/vendor`,
   `/config` and `.env*` off the web.

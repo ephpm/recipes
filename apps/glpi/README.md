@@ -48,7 +48,7 @@ and change the passwords of the default accounts (`glpi`, `tech`,
 ```bash
 docker compose exec ephpm ephpm php bin/console db:check
 docker compose exec ephpm ephpm php bin/console plugin:list
-docker compose exec ephpm ephpm cache reset      # after installing or updating plugins
+docker compose restart ephpm                     # after updating plugins (reloads PHP code)
 ```
 
 `php` on PATH is a shim for `ephpm php`, so `php bin/console ...` works as in
@@ -70,8 +70,9 @@ GLPI's documentation.
   the public URL in Setup → General → "URL of the application".
 * Marketplace plugins install into `/var/glpi/marketplace`. OPcache runs
   with timestamp validation off (`ephpm serve` default): after **updating**
-  a plugin, run `docker compose exec ephpm ephpm cache reset` (newly added
-  files are picked up without it).
+  a plugin, run `docker compose restart ephpm` (newly added files are picked
+  up without it; `ephpm cache reset` is a no-op on a single node in v0.11.3,
+  `issues/nextcloud.md`).
 * Sessions are PHP file sessions in `/var/glpi/files/_sessions`, as
   upstream; nothing is moved to the KV store.
 

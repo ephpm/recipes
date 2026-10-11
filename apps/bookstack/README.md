@@ -84,7 +84,7 @@ docker compose logs ephpm                                               # PHP er
   `/app/themes` inside the image; mount a directory there to customise.
 * OPcache runs with timestamp validation off (ePHPm's `serve` default).
   After changing PHP files (themes with PHP hooks, for instance) run
-  `docker compose exec ephpm ephpm cache reset` or restart the container.
+  `docker compose restart ephpm` (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 
 ## Known limitations
 

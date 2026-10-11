@@ -105,7 +105,8 @@ repro). Use `compose.sqlite.yml` for a single container.
   `FRESHRSS_INSTALL` (or edit `data/config.php`).
 * OPcache runs with timestamp validation off (`ephpm serve` default). After
   changing PHP files in the container (extensions in the `extensions` volume
-  included) run `docker compose exec ephpm ephpm cache reset` or restart.
+  included) run `docker compose restart ephpm`
+  (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 * `disable_update` is forced on in `config.default.php`, as in the official
   image: update the image, not the app from its UI.
 

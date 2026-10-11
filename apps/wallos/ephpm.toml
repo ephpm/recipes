@@ -1,0 +1,51 @@
+# ePHPm configuration for Wallos.
+#
+# Plain PHP on its own SQLite file; ePHPm is the web server + PHP runtime.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+# nginx: try_files $uri $uri/ /index.php?$args
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 268435456           # 256 MiB — database restore uploads (the official nginx config's client_max_body_size)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# The deny rules from Wallos's nginx.default.conf: never serve the database
+# file, the includes, or PHP dropped into the logo upload directory.
+blocked_paths = [
+    "/db/*",
+    "/includes/*",
+    "/.tmp/*",
+    "/images/uploads/logos/*.php",
+    "/images/uploads/logos/*/*.php",
+]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [
+    # v0.11.3 still inherits PHP's compiled-in display_errors=1 under `ephpm serve`;
+    # keep warnings out of responses and in the container log
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "256M"],
+    ["post_max_size", "256M"],
+]
+
+# Loopback RESP listener so `ephpm cache reset` (OPcache refresh after an
+# upgrade) can reach the server from inside the container. Not published.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

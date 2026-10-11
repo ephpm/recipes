@@ -1,0 +1,39 @@
+# Wallos on ePHPm — no database server (Wallos uses its own SQLite file).
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   register the first (admin) user on the first visit
+#
+# Replaces: the bellamy/wallos image (nginx + php-fpm + crond).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-wallos
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      TZ: ${TZ:-UTC}
+    volumes:
+      - wallos-db:/var/www/html/db                        # the SQLite database
+      - wallos-logos:/var/www/html/images/uploads/logos   # uploaded logos and avatars
+    restart: unless-stopped
+
+  # Wallos's cron jobs (payment-date rollover, exchange rates, notification
+  # emails, update checks) — the same crontab the official image installs,
+  # run by cron in a second container from the same image.
+  cron:
+    image: recipes-wallos
+    command: ["cron", "-f"]
+    environment:
+      TZ: ${TZ:-UTC}
+    volumes:
+      - wallos-db:/var/www/html/db
+      - wallos-logos:/var/www/html/images/uploads/logos
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+volumes:
+  wallos-db:
+  wallos-logos:

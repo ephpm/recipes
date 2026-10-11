@@ -21,18 +21,30 @@ done
 # .env lives in the storage volume and /app/.env points at it: the APP_KEY
 # generated below and the database settings the setup wizard writes must
 # survive container recreation (the official image bind-mounts ./.env).
-if [ ! -f "$STORAGE/.env" ]; then
-    cp /usr/local/share/linkace/env.template "$STORAGE/.env"
-fi
+# Only the server seeds it; a command container (the scheduler) waits for
+# the seed so the two never race on the same file.
+case "${1:-}" in
+    ""|-*)
+        if [ ! -f "$STORAGE/.env" ]; then
+            cp /usr/local/share/linkace/env.template "$STORAGE/.env"
+        fi
+        # Generate the application key once (LinkAce would otherwise do it on
+        # the first request and log a warning about the insecure placeholder).
+        if grep -q '^APP_KEY=someRandomStringWith32Characters' "$STORAGE/.env" && [ -z "${APP_KEY:-}" ]; then
+            key="base64:$(ephpm php -r 'echo base64_encode(random_bytes(32));')"
+            sed -i "s|^APP_KEY=.*|APP_KEY=$key|" "$STORAGE/.env"
+            echo "==> generated APP_KEY into storage/.env"
+        fi
+        ;;
+    *)
+        i=0
+        until [ -f "$STORAGE/.env" ] && ! grep -q '^APP_KEY=someRandomStringWith32Characters' "$STORAGE/.env"; do
+            i=$((i + 1)); [ "$i" -ge 120 ] && { echo "!!! storage/.env was not seeded by the server after 120s" >&2; exit 1; }
+            sleep 1
+        done
+        ;;
+esac
 ln -sfn "$STORAGE/.env" "$APP/.env"
-
-# Generate the application key once (LinkAce would otherwise do it on the
-# first request and log a warning about the insecure placeholder).
-if grep -q '^APP_KEY=someRandomStringWith32Characters' "$STORAGE/.env" && [ -z "${APP_KEY:-}" ]; then
-    key="base64:$(ephpm php -r 'echo base64_encode(random_bytes(32));')"
-    sed -i "s|^APP_KEY=.*|APP_KEY=$key|" "$STORAGE/.env"
-    echo "==> generated APP_KEY into storage/.env"
-fi
 
 # Wait for an external database (the embedded one starts with the server).
 DB_HOST="${DB_HOST:-127.0.0.1}"

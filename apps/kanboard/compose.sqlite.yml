@@ -1,0 +1,24 @@
+# Kanboard on ePHPm — single container, Kanboard's own built-in SQLite database.
+#
+#   docker compose -f compose.sqlite.yml up -d
+#
+# This is Kanboard's default database (data/db.sqlite via pdo_sqlite): no
+# database server, nothing experimental. Back up the `data` volume.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-kanboard
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      ENABLE_URL_REWRITE: "true"
+      PLUGIN_INSTALLER: "true"
+    volumes:
+      - data:/var/www/app/data
+      - plugins:/var/www/app/plugins
+    restart: unless-stopped
+
+volumes:
+  data:
+  plugins:

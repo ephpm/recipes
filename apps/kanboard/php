@@ -1,0 +1,4 @@
+#!/bin/sh
+# `php` on PATH → the embedded PHP CLI, so Kanboard's `./cli` (`#!/usr/bin/env php`)
+# runs exactly as documented: `docker compose exec ephpm ./cli cronjob`.
+exec ephpm php "$@"

@@ -1,0 +1,54 @@
+# Kanboard on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in with admin / admin and change the password
+#
+# Replaces: nginx + php-fpm + s6 + crond (the kanboard/kanboard image).
+# Same environment variables as the official image (config.default.php reads
+# them): DB_*, PLUGIN_INSTALLER, MAIL_*, LDAP_*, REVERSE_PROXY_*, …
+
+services:
+  ephpm:
+    build: .
+    image: recipes-kanboard
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      DB_DRIVER: mysql
+      DB_HOSTNAME: db
+      DB_NAME: kanboard
+      DB_USERNAME: kanboard
+      DB_PASSWORD: kanboard
+      # ePHPm applies the nginx rewrite, so Kanboard can emit pretty URLs
+      ENABLE_URL_REWRITE: "true"
+      PLUGIN_INSTALLER: "true"
+      # CRON_HOUR: "8"           # daily `./cli cronjob` hour (empty = off)
+    volumes:
+      - data:/var/www/app/data
+      - plugins:/var/www/app/plugins
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: kanboard
+      MARIADB_USER: kanboard
+      MARIADB_PASSWORD: kanboard
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  data:
+  plugins:
+  db-data:

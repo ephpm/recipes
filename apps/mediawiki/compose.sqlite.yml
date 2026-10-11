@@ -1,0 +1,31 @@
+# MediaWiki on ePHPm — single container, MediaWiki's own SQLite backend.
+#
+#   docker compose -f compose.sqlite.yml up -d
+#
+# MediaWiki supports SQLite natively (pdo_sqlite, database files under
+# /var/www/data — the `data` volume). No database server, nothing
+# experimental; fine for small wikis.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-mediawiki
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      MEDIAWIKI_SITE_NAME: ${MEDIAWIKI_SITE_NAME:-ePHPm Wiki}
+      MEDIAWIKI_SITE_SERVER: ${MEDIAWIKI_SITE_SERVER:-http://localhost:8080}
+      MEDIAWIKI_SITE_LANG: en
+      MEDIAWIKI_ADMIN_USER: ${MEDIAWIKI_ADMIN_USER:-admin}
+      MEDIAWIKI_ADMIN_PASS: ${MEDIAWIKI_ADMIN_PASS:-mediawiki-admin-password}
+      MEDIAWIKI_DB_TYPE: sqlite
+    volumes:
+      - images:/var/www/html/images
+      - config:/var/www/config
+      - data:/var/www/data
+    restart: unless-stopped
+
+volumes:
+  images:
+  config:
+  data:

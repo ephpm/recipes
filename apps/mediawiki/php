@@ -1,0 +1,4 @@
+#!/bin/sh
+# `php` on PATH → the embedded PHP CLI, so MediaWiki's maintenance scripts run
+# as documented: `docker compose exec ephpm php maintenance/run.php update`.
+exec ephpm php "$@"

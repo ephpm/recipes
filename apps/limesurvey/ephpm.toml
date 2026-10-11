@@ -1,0 +1,53 @@
+# ePHPm configuration for LimeSurvey.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php", "index.html"]
+# .htaccess: anything that is not a file → index.php (path-format URLs:
+# /index.php/admin/..., /admin/..., /rest/v1/...).
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 104857600           # 100 MiB: survey imports, response uploads
+
+[server.timeouts]
+request = 600                       # above max_execution_time, so PHP's own timeout fires first
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# What LimeSurvey's .htaccess files deny (application/ and locale/ have
+# their own "Require all denied"); hidden files are refused by default.
+blocked_paths = ["/application/*", "/vendor/*", "/docs/*", "/locale/*", "/tmp/runtime/*",
+                 "/setdebug.php", "/open-api-gen.php", "/composer.json", "/composer.lock",
+                 "/package.json", "/publiccode.yml", "/README.md", "/SECURITY.md"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 300
+memory_limit = "256M"
+# LimeSurvey's ComfortUpdate and plugin manager replace PHP files from the
+# web UI: let OPcache notice (PHP's stock 2-second interval).
+opcache_validate_timestamps = true
+opcache_revalidate_freq = 2
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "100M"],
+    ["post_max_size", "100M"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` work
+# inside the container. Not published.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

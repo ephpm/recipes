@@ -1,0 +1,55 @@
+# LimeSurvey on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080/admin   (EPHPM_PORT overrides the host port)
+#   log in with ADMIN_USER / ADMIN_PASSWORD
+#
+# Replaces: Apache + mod_php (the martialblog/limesurvey image; same
+# variable names). The first start installs the database.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-limesurvey
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      DB_TYPE: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: limesurvey
+      DB_USERNAME: limesurvey
+      DB_PASSWORD: ${DB_PASSWORD:-limesurvey-db-password}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrator}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-LimeSurvey-Admin-Pass-1}
+      # PUBLIC_URL: https://surveys.example.com/   # if generated links need an absolute base
+    volumes:
+      - upload:/var/www/html/upload     # uploaded files, themes, user plugins
+      - config:/var/limesurvey          # security.php (encryption keys)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: limesurvey
+      MARIADB_USER: limesurvey
+      MARIADB_PASSWORD: ${DB_PASSWORD:-limesurvey-db-password}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-limesurvey-root-password}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  upload:
+  config:
+  db-data:

@@ -55,7 +55,30 @@ is untested, and the README says so.
 | [firefly-iii](apps/firefly-iii/) | Firefly III | official image (apache) + cron | MariaDB | see README | tested 2026-10-11, v0.11.3-php8.5 |
 | [linkace](apps/linkace/) | LinkAce 2.6 | nginx + fpm (supervisord image) | MariaDB | no (schema dump DDL) | tested 2026-10-11, v0.11.3-php8.5 |
 | [shaarli](apps/shaarli/) | Shaarli | nginx + fpm | flat-file | single container (native) | tested 2026-10-11, v0.11.3-php8.5 |
+| [kanboard](apps/kanboard/) | Kanboard | nginx + fpm + s6 + crond | MariaDB | SQLite single container (app-native) | tested 2026-10-11, v0.11.3-php8.5 (both variants) |
+| [kimai](apps/kimai/) | Kimai | `kimai2:fpm` + nginx / `kimai2:apache` | MariaDB | no | tested 2026-10-11, v0.11.3-php8.5 |
+| [wallabag](apps/wallabag/) | wallabag | nginx + fpm + s6 | MariaDB | SQLite single container (app-native) | tested 2026-10-11, v0.11.3-php8.4 (both variants) |
+| [shlink](apps/shlink/) | Shlink | RoadRunner (official image) / nginx + fpm | MariaDB | SQLite single container (app-native) | tested 2026-10-11, v0.11.3-php8.5 (both variants) |
+| [snipe-it](apps/snipe-it/) | Snipe-IT | Apache + PHP image, Redis cache/sessions | MariaDB | no | tested 2026-10-11, v0.11.3-php8.5 |
+| [privatebin](apps/privatebin/) | PrivateBin | nginx + fpm + s6 | flat-file | single container (native) | tested 2026-10-11, v0.11.3-php8.5 |
+| [yourls](apps/yourls/) | YOURLS | Apache + mod_php | MariaDB | no (embedded DB rejects column-level `CHARACTER SET`) | tested 2026-10-11, v0.11.3-php8.5 |
+| [wallos](apps/wallos/) | Wallos | nginx + fpm + dcron | SQLite (app-native) | single container (native) | tested 2026-10-11, v0.11.3-php8.5 |
+| [freshrss](apps/freshrss/) | FreshRSS | Apache + mod_php + crond | PostgreSQL | SQLite single container (app-native) | tested 2026-10-11, v0.11.3-php8.5 (both variants) |
+| [castopod](apps/castopod/) | Castopod | FrankenPHP + supercronic (s6) | MariaDB | no | tested 2026-10-11, v0.11.3-php8.4 |
+| [movary](apps/movary/) | Movary | nginx + fpm + job worker (supervisord) | MariaDB | SQLite single container (app-native) | tested 2026-10-11, v0.11.3-php8.5 (both variants) |
+| [phpmyadmin](apps/phpmyadmin/) | phpMyAdmin | Apache + mod_php | MariaDB (managed) | — | tested 2026-10-11, v0.11.3-php8.5 (with a `ResponseRenderer` patch, see README) |
+| [dokuwiki](apps/dokuwiki/) | DokuWiki | Apache/nginx + fpm | flat-file | single container (native) | tested 2026-10-11, v0.11.3-php8.5 |
+| [invoiceninja](apps/invoiceninja/) | Invoice Ninja 5 | fpm image + nginx, Redis | MariaDB | no | tested 2026-10-11, v0.11.3-php8.5 |
+| [espocrm](apps/espocrm/) | EspoCRM | official image (apache/fpm) + daemon container | MariaDB | no | tested 2026-10-11, v0.11.3-php8.4 |
+| [akaunting](apps/akaunting/) | Akaunting | nginx/apache + fpm, Redis | MariaDB | no | tested 2026-10-11, v0.11.3-php8.3 |
+| [koillection](apps/koillection/) | Koillection | FrankenPHP (worker) | PostgreSQL | MariaDB variant | tested 2026-10-11, v0.11.3-php8.5 (PostgreSQL, MariaDB) |
+| [adminer](apps/adminer/) | Adminer | `php -S` (official image) | MariaDB (managed) | — | tested 2026-10-11, v0.11.3-php8.5 |
+| [mediawiki](apps/mediawiki/) | MediaWiki | Apache + mod_php | MariaDB | SQLite single container (app-native) | tested 2026-10-11, v0.11.3-php8.5 (both variants) |
+| [part-db](apps/part-db/) | Part-DB | Apache + fpm | MariaDB | SQLite single container (app-native) | tested 2026-10-11, v0.11.3-php8.5 (both variants) |
+| [pelican](apps/pelican/) | Pelican Panel | Caddy + fpm + supervisord (scheduler, queue) | SQLite (app-native) | single container + scheduler/queue sidecars | tested 2026-10-11, v0.11.3-php8.5 |
+| [matomo](apps/matomo/) | Matomo | Apache + mod_php / nginx + fpm | MariaDB | no | tested 2026-10-11, v0.11.3-php8.5 |
 | [koel](apps/koel/) | Koel 9.15 | nginx + fpm | MariaDB | — | **blocked** — ePHPm's GD has no JPEG/WebP (installer refuses to run) |
+| [monica](apps/monica/) | Monica 4 | Apache + mod_php + cron, Redis | MariaDB | — | **blocked** — ePHPm's GD has no FreeType (creating a contact answers 500) |
 
 ## Running the smoke tests locally
 

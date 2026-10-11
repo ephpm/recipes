@@ -1,0 +1,44 @@
+# Adminer on ePHPm, managing a MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in with server "db", root / root (MARIADB_ROOT_PASSWORD below)
+#
+# Replaces: php -S (the official adminer image's built-in PHP web server).
+# Same variables as the official image: ADMINER_DEFAULT_SERVER (prefilled
+# "Server" field, default db), ADMINER_DESIGN (a theme from designs/),
+# ADMINER_PLUGINS (space-separated plugin names from plugins/).
+# To manage a database elsewhere, drop the `db` service and set
+# ADMINER_DEFAULT_SERVER to its host.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-adminer
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+      # a theme from designs/ (a directory with an adminer.css, e.g. hever), plugins from plugins/
+      ADMINER_DESIGN: ${ADMINER_DESIGN:-}
+      ADMINER_PLUGINS: ${ADMINER_PLUGINS:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  db-data:

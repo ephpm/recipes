@@ -1,0 +1,52 @@
+# ePHPm configuration for Adminer.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+# Everything is `/?…` on index.php (plus the optional adminer.css design
+# file served statically); anything else is a 404.
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.request]
+max_body_size = 134217728           # 128 MiB dump uploads, as the official image
+
+[server.timeouts]
+request = 660                       # above [php] max_execution_time for long imports
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# Plugin sources and the stub loader are PHP-only; nothing outside index.php
+# and the design CSS needs to be served.
+blocked_paths = ["/plugins/*", "/plugins-enabled/*", "/plugin-loader.php", "/adminer.php", "/.adminer-init"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+# Official image: max_execution_time 600, memory_limit 1G, 128M uploads
+max_execution_time = 600
+memory_limit = "1G"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "128M"],
+    ["post_max_size", "128M"],
+    ["max_input_vars", "5000"],
+    # PHP sessions in ePHPm's in-process KV store (Adminer keeps the login
+    # state and CSRF token in $_SESSION).
+    ["session.save_handler", "ephpm"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

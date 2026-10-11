@@ -1,0 +1,4 @@
+#!/bin/sh
+# Castopod's CodeIgniter console (`spark`) through the embedded PHP
+# (`docker compose exec ephpm spark castopod:database-update`).
+exec ephpm php -d memory_limit=-1 /app/spark "$@"

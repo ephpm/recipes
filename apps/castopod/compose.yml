@@ -1,0 +1,64 @@
+# Castopod on ePHPm + MariaDB (+ the scheduled-tasks runner).
+#
+#   CP_BASEURL=http://localhost:8080 docker compose up -d
+#   open http://localhost:8080/cp-install     (creates the super-admin)
+#
+# Replaces: the official castopod/castopod image (FrankenPHP + supercronic
+# under s6-overlay) and its docker-compose example.
+
+x-castopod: &castopod
+  build: .
+  image: recipes-castopod
+  environment:
+    # Same variable names as castopod/castopod.
+    CP_BASEURL: ${CP_BASEURL:-http://localhost:8080}
+    CP_DISABLE_HTTPS: "1"            # plain http for local use; remove behind TLS
+    CP_DATABASE_HOSTNAME: db
+    CP_DATABASE_NAME: castopod
+    CP_DATABASE_USERNAME: castopod
+    CP_DATABASE_PASSWORD: castopod
+    # CP_ANALYTICS_SALT: generated once into the writable volume when unset
+    # CP_MEDIA_BASEURL, CP_EMAIL_SMTP_*, CP_MEDIA_FILE_MANAGER=s3 … as upstream
+  volumes:
+    - media:/app/public/media
+    - writable:/app/writable
+
+services:
+  ephpm:
+    <<: *castopod
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The official image runs `spark tasks:run` every minute under supercronic.
+  cron:
+    <<: *castopod
+    command: ["sh", "-c", "while true; do spark tasks:run; sleep 60; done"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: castopod
+      MARIADB_USER: castopod
+      MARIADB_PASSWORD: castopod
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  media:
+  writable:
+  db-data:

@@ -1,0 +1,59 @@
+# ePHPm configuration for Grav (flat-file CMS, no database).
+#
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php", "index.html"]
+# Grav's .htaccess / nginx.conf: anything that is not a file or directory
+# goes to index.php.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 67108864            # 64 MiB — media uploads, backups restore
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# Grav's webserver-configs/nginx.conf "Security" block, as far as path globs
+# can express it (`*` is one path segment): code and runtime directories,
+# configuration and accounts (password hashes), form data, the raw Markdown
+# of pages, and PHP outside index.php. Dotfiles are refused by
+# [server.static] hidden_files (default "deny"). See README for the parts
+# that are stricter or looser than nginx.
+blocked_paths = [
+    "/cache/*", "/bin/*", "/logs/*", "/backup/*", "/tmp/*", "/tests/*", "/vendor/*",
+    "/user/config/*", "/user/env/*", "/user/accounts/*", "/user/data/*",
+    "/system/src/*", "/system/*.php", "/system/config/*",
+    "/user/pages/*.md", "/user/pages/*/*.md", "/user/pages/*/*/*.md",
+    "/user/pages/*/*/*/*.md", "/user/pages/*/*/*/*/*.md", "/user/pages/*/*/*/*/*/*.md",
+    "/user/plugins/*/*.php", "/user/plugins/*/*/*.php", "/user/plugins/*/*/*/*.php",
+    "/user/plugins/*/*.yaml", "/user/plugins/*/classes/*", "/user/plugins/*/vendor/*",
+    "/user/plugins/*/cli/*", "/user/themes/*/*.php", "/user/themes/*/*.yaml",
+    "/user/themes/*/templates/*",
+    "/images/*.php", "/assets/*.php",
+    "/LICENSE.txt", "/composer.json", "/composer.lock",
+]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+    ["upload_max_filesize", "64M"],
+    ["post_max_size", "64M"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` can reach the in-process store.
+# Not published outside the container.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

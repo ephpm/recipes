@@ -1,0 +1,28 @@
+# Grav on ePHPm — one container, no database (Grav is flat-file).
+#
+#   docker compose up -d
+#   open http://localhost:8080          (EPHPM_PORT overrides the host port)
+#   open http://localhost:8080/admin    (create the first admin account there,
+#                                        or set GRAV_ADMIN_* below)
+#
+# Replaces: Apache/nginx + php-fpm (the linuxserver/grav image).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-grav
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # Optional first admin account, created on start when it does not exist yet:
+      GRAV_ADMIN_USER: ${GRAV_ADMIN_USER:-}
+      GRAV_ADMIN_PASSWORD: ${GRAV_ADMIN_PASSWORD:-}
+      GRAV_ADMIN_EMAIL: ${GRAV_ADMIN_EMAIL:-admin@example.com}
+    volumes:
+      - grav-user:/var/www/html/user        # config, pages, accounts, plugins, themes
+      - grav-backup:/var/www/html/backup    # bin/grav backup archives
+    restart: unless-stopped
+
+volumes:
+  grav-user:
+  grav-backup:

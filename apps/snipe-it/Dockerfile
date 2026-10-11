@@ -40,6 +40,9 @@ COPY --from=vendor /app /app
 COPY env.template /usr/local/share/snipe-it/env.template
 COPY ephpm.toml /etc/ephpm/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+# `php` on PATH: Laravel's scheduler and tools that re-invoke PHP look for
+# a `php` binary (PHP_BINARY is `ephpm` here), so give them `ephpm php`.
+RUN printf '#!/bin/sh\nexec ephpm php "$@"\n' > /usr/local/bin/php && chmod +x /usr/local/bin/php
 WORKDIR /app
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     # the composer scripts skipped above, on the PHP that will run the app

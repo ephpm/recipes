@@ -35,6 +35,9 @@ FROM docker.io/ephpm/ephpm:${EPHPM_TAG}
 COPY --from=src /src /app
 COPY ephpm.toml /etc/ephpm/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+# `php` on PATH: Laravel's scheduler and tools that re-invoke PHP look for
+# a `php` binary (PHP_BINARY is `ephpm` here), so give them `ephpm php`.
+RUN printf '#!/bin/sh\nexec ephpm php "$@"\n' > /usr/local/bin/php && chmod +x /usr/local/bin/php
 WORKDIR /app
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && mkdir -p /music /app/storage/search-indexes /app/storage/app/public/images \

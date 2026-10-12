@@ -1,0 +1,89 @@
+# Aimeos shop on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080          shop front-end (demo catalogue)
+#   open http://localhost:8080/admin    back-end: AIMEOS_ADMIN_EMAIL / AIMEOS_ADMIN_PASSWORD
+#   (EPHPM_PORT overrides the host port — keep APP_URL in sync with it)
+#
+# Replaces: nginx/apache + php-fpm (Sail upstream) and the crontab entries
+# for `artisan aimeos:jobs` (the `jobs` service).
+
+x-shop-env: &shop-env
+  APP_URL: ${APP_URL:-http://localhost:8080}
+  # APP_KEY: base64:...      (otherwise generated once into the storage volume)
+  DB_CONNECTION: mysql
+  DB_HOST: db
+  DB_PORT: "3306"
+  DB_DATABASE: aimeos
+  DB_USERNAME: aimeos
+  DB_PASSWORD: ${DB_PASSWORD:-aimeos-db-password}
+  SESSION_DRIVER: file
+  CACHE_DRIVER: file
+  QUEUE_CONNECTION: sync
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  SHOP_MULTILOCALE: "false"
+  SHOP_MULTISHOP: "false"
+  SHOP_REGISTRATION: ${SHOP_REGISTRATION:-false}
+  SHOP_PERMISSION: admin
+  # Behind a TLS-terminating proxy, also set ASSET_URL to the public https URL.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-aimeos
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      <<: *shop-env
+      AIMEOS_ADMIN_EMAIL: ${AIMEOS_ADMIN_EMAIL:-admin@example.com}
+      AIMEOS_ADMIN_PASSWORD: ${AIMEOS_ADMIN_PASSWORD:-Aimeos-Admin-Pass-1}
+      AIMEOS_DEMO: ${AIMEOS_DEMO:-1}    # demo catalogue on the first start
+    volumes:
+      - storage:/app/storage            # APP_KEY, logs, sessions, cache
+      - media:/app/public/aimeos        # product images and other media
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The cron jobs Aimeos documents (https://aimeos.org/docs/latest/laravel/setup/#cronjobs):
+  # e-mails, payment/delivery status, index rebuild, cleanup.
+  jobs:
+    image: recipes-aimeos
+    command:
+      - sh
+      - -c
+      - |
+        until [ -f storage/.aimeos_setup_done ]; do sleep 5; done   # first start: wait for aimeos:setup
+        while :; do
+          ephpm php artisan aimeos:jobs "order/email/delivery order/email/payment order/service/async order/service/delivery order/service/payment order/cleanup/unfinished order/cleanup/unpaid customer/email/watch product/bought index/rebuild index/optimize"
+          sleep "$${AIMEOS_JOBS_INTERVAL:-3600}"
+        done
+    environment: *shop-env
+    volumes:
+      - storage:/app/storage
+      - media:/app/public/aimeos
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: aimeos
+      MARIADB_USER: aimeos
+      MARIADB_PASSWORD: ${DB_PASSWORD:-aimeos-db-password}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-aimeos-root-password}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  storage:
+  media:
+  db-data:

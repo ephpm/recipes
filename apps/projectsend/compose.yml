@@ -1,0 +1,90 @@
+# ProjectSend 2 on ePHPm + MySQL 8.4.
+#
+#   docker compose up -d
+#   open http://localhost:8080    log in as PROJECTSEND_ADMIN_EMAIL / PROJECTSEND_ADMIN_PASSWORD
+#   (EPHPM_PORT overrides the host port — keep APP_URL in sync with it)
+#
+# Replaces: the projectsend/projectsend image (nginx + php-fpm + queue
+# workers + scheduler) and its Redis service — sessions, cache and the job
+# queue live in MySQL, the configuration INSTALL.md documents.
+
+x-app-env: &app-env
+  APP_URL: ${APP_URL:-http://localhost:8080}
+  APP_TIMEZONE: ${APP_TIMEZONE:-UTC}
+  # APP_KEY: base64:...      (otherwise generated once into the storage volume — back it up)
+  DB_CONNECTION: mysql
+  DB_HOST: db
+  DB_PORT: "3306"
+  DB_DATABASE: projectsend
+  DB_USERNAME: projectsend
+  DB_PASSWORD: ${DB_PASSWORD:-projectsend-db-password}
+  SESSION_DRIVER: database
+  CACHE_STORE: database
+  QUEUE_CONNECTION: database
+  FILESYSTEM_DISK: local
+  # Mail is configured in the app (System → Settings → Email); these are
+  # only used until then.
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-files@example.com}
+  # Behind a TLS proxy: TRUSTED_PROXIES: "*" and SESSION_SECURE_COOKIE: "true"
+
+services:
+  ephpm:
+    build: .
+    image: recipes-projectsend
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      <<: *app-env
+      # first administrator (skipped when a staff account exists); leave
+      # unset to create it on the browser setup screen instead
+      PROJECTSEND_ADMIN_EMAIL: ${PROJECTSEND_ADMIN_EMAIL:-admin@example.com}
+      PROJECTSEND_ADMIN_PASSWORD: ${PROJECTSEND_ADMIN_PASSWORD:-ProjectSend-Admin-Pass-1}
+    volumes:
+      - storage:/app/storage        # uploaded files, APP_KEY, logs
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # INSTALL.md's projectsend-worker.service: e-mail and zip downloads
+  worker:
+    image: recipes-projectsend
+    command: ["ephpm", "php", "artisan", "queue:work", "--queue=default,zips", "--tries=3", "--backoff=3"]
+    environment: *app-env
+    volumes:
+      - storage:/app/storage
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  # INSTALL.md's crontab line: `php artisan schedule:run` every minute
+  scheduler:
+    image: recipes-projectsend
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run --no-interaction; sleep 60; done"]
+    environment: *app-env
+    volumes:
+      - storage:/app/storage
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mysql:8.4
+    environment:
+      MYSQL_DATABASE: projectsend
+      MYSQL_USER: projectsend
+      MYSQL_PASSWORD: ${DB_PASSWORD:-projectsend-db-password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-projectsend-root-password}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  storage:
+  db-data:

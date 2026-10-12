@@ -1,0 +1,42 @@
+# ePHPm configuration for ProjectSend 2 (Laravel 12) — MySQL database.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app/public"
+index_files = ["index.php"]
+# nginx `try_files $uri $uri/ /index.php?$query_string`
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 104857600           # 100 MiB — uploads arrive in 20 MB chunks (INSTALL.md: 100M)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# document_root is public/, so the app code, .env and vendor/ are outside it.
+# (Do not block /vendor/* or /storage/*: public/vendor holds published
+# assets and public/storage is the public-disk symlink.)
+blocked_paths = ["/.env", "/.git*"]
+# multi-tenant-only knobs; set explicitly so single-site mode does not warn
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],       # v0.11.3 inherits PHP's display_errors=1 under `serve`
+    ["log_errors", "On"],
+    ["upload_max_filesize", "100M"],
+    ["post_max_size", "100M"],
+]
+
+# Loopback RESP listener: Laravel's cache/session "redis" drivers can point
+# here (REDIS_HOST=127.0.0.1) instead of a Redis container, and
+# `ephpm kv ...` reaches the in-process store. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

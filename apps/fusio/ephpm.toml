@@ -1,0 +1,43 @@
+# ePHPm configuration for Fusio (MySQL/MariaDB database).
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app/public"
+index_files = ["index.php", "index.html"]
+# public/.htaccess: anything that is not a file or directory goes to
+# index.php (Fusio routes on REQUEST_URI; psx_dispatch is ""), except the
+# static web apps under /apps/, which Apache leaves alone. ePHPm has one
+# fallback chain, so a missing file under /apps/ also reaches index.php,
+# which answers it with Fusio's JSON 404.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 16777216            # 16 MiB
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+# document_root is public/: configuration, .env and vendor/ are outside it.
+blocked_paths = ["/.git*"]
+# multi-tenant-only knobs; set explicitly so single-site mode does not warn
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],       # v0.11.3 inherits PHP's display_errors=1 under `serve`
+    ["log_errors", "On"],
+    ["upload_max_filesize", "16M"],
+    ["post_max_size", "16M"],
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container. Not published outside it.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

@@ -1,0 +1,85 @@
+# Fusio on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080/apps/fusio/    backend: FUSIO_BACKEND_USER / FUSIO_BACKEND_PW
+#   (EPHPM_PORT overrides the host port — keep FUSIO_URL / FUSIO_APPS_URL in sync)
+#
+# Replaces: the fusio/fusio image (Apache + mod_php + cron + supervisord).
+# Same FUSIO_* variables as the official image.
+
+x-fusio-env: &fusio-env
+  # 32 hex chars; encrypts stored connection credentials — set your own
+  # before the first start and never change it afterwards.
+  FUSIO_PROJECT_KEY: ${FUSIO_PROJECT_KEY:-0d4d9a1f2c3b4e5f60718293a4b5c6d7}
+  FUSIO_CONNECTION: pdo-mysql://fusio:${DB_PASSWORD:-fusio-db-password}@db/fusio
+  FUSIO_URL: ${FUSIO_URL:-http://localhost:8080}
+  FUSIO_APPS_URL: ${FUSIO_APPS_URL:-http://localhost:8080/apps}
+  FUSIO_ENV: prod
+  FUSIO_DEBUG: "false"
+  # FUSIO_MAILER: smtp://user:pass@smtp.example.com:587
+  # FUSIO_MAIL_SENDER: api@example.com
+  # FUSIO_TRUSTED_IP_HEADER: X-Forwarded-For   (behind a reverse proxy)
+
+services:
+  ephpm:
+    build: .
+    image: recipes-fusio
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      <<: *fusio-env
+      FUSIO_BACKEND_USER: ${FUSIO_BACKEND_USER:-admin}
+      FUSIO_BACKEND_EMAIL: ${FUSIO_BACKEND_EMAIL:-admin@example.com}
+      FUSIO_BACKEND_PW: ${FUSIO_BACKEND_PW:-Fusio-Admin-Pass-1}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # the official image's /etc/cron.d/fusio: `system:cronjob` every minute
+  # (Fusio's own scheduled actions), log rotation and cleanup monthly
+  cron:
+    image: recipes-fusio
+    command:
+      - sh
+      - -c
+      - |
+        n=0
+        while :; do
+          ephpm php bin/fusio system:cronjob
+          n=$$((n + 1)); [ $$((n % 43200)) -eq 1 ] && { ephpm php bin/fusio system:log_rotate; ephpm php bin/fusio system:clean; }
+          sleep 60
+        done
+    environment: *fusio-env
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  # the official image's supervisord program: the Symfony Messenger worker
+  # (doctrine transport) that runs Fusio's asynchronous work
+  worker:
+    image: recipes-fusio
+    command: ["ephpm", "php", "bin/fusio", "messenger:consume", "--time-limit=3600"]
+    environment: *fusio-env
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: fusio
+      MARIADB_USER: fusio
+      MARIADB_PASSWORD: ${DB_PASSWORD:-fusio-db-password}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-fusio-root-password}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  db-data:

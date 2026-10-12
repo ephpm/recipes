@@ -1,0 +1,75 @@
+# Filament Demo on ePHPm + PostgreSQL (the database the hosted demo runs on).
+#
+#   docker compose up -d
+#   open http://localhost:8080      log in as admin@filamentphp.com / demo.Filament@2021!
+#   (EPHPM_PORT overrides the host port — keep APP_URL in sync with it)
+#
+# Replaces: nginx + php-fpm (or `php artisan serve` / Octane) and the cron
+# entry for `artisan schedule:run` (the `scheduler` service). The demo's only
+# scheduled task is its hourly reset (`app:reset-demo-database`, PostgreSQL
+# schema swap) — remove the scheduler service to keep your changes.
+
+x-app-env: &app-env
+  APP_NAME: Filament Demo
+  APP_URL: ${APP_URL:-http://localhost:8080}
+  # The demo forces https:// URLs when APP_ENV=production (AppServiceProvider);
+  # keep `local` for plain http, use production behind a TLS proxy.
+  APP_ENV: ${APP_ENV:-local}
+  APP_DEBUG: "false"
+  # APP_KEY: base64:...       (otherwise generated once into the storage volume)
+  DB_CONNECTION: pgsql
+  DB_HOST: db
+  DB_PORT: "5432"
+  DB_DATABASE: filament
+  DB_USERNAME: filament
+  DB_PASSWORD: ${DB_PASSWORD:-filament-db-password}
+  SESSION_DRIVER: file
+  CACHE_DRIVER: file
+  CACHE_STORE: file
+  QUEUE_CONNECTION: sync
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  FILESYSTEM_DRIVER: local
+
+services:
+  ephpm:
+    build: .
+    image: recipes-filament-demo
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: *app-env
+    volumes:
+      - storage:/app/storage          # APP_KEY, sessions, cache, uploaded media (public disk)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # cron's `* * * * * php artisan schedule:run`
+  scheduler:
+    image: recipes-filament-demo
+    command: ["sh", "-c", "while :; do ephpm php artisan schedule:run --no-interaction; sleep 60; done"]
+    environment: *app-env
+    volumes:
+      - storage:/app/storage          # shared: maintenance-mode flag, cache lock, media
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/postgres:17
+    environment:
+      POSTGRES_DB: filament
+      POSTGRES_USER: filament
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-filament-db-password}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U filament -d filament"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  storage:
+  db-data:

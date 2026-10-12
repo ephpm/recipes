@@ -1,0 +1,11 @@
+#!/bin/sh
+# elgg-cli on ePHPm's embedded PHP.
+#
+# session.use_cookies=0 + an empty session.cache_limiter: `ephpm php` reports
+# headers_sent() as true from the start (issues/wallabag.md), so Symfony's
+# NativeSessionStorage refuses to start the session Elgg opens on boot
+# ("Failed to start the session because headers have already been sent")
+# unless the session would send no cookie and no cache headers — which is
+# what a CLI session should do anyway.
+exec ephpm php -d session.use_cookies=0 -d session.cache_limiter= \
+    /var/www/elgg/vendor/bin/elgg-cli "$@"

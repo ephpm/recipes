@@ -1,0 +1,74 @@
+# Elgg on ePHPm + MariaDB.
+#
+#   ELGG_ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port;
+#                                 ELGG_WWWROOT must match the URL you open)
+#   log in as admin / $ELGG_ADMIN_PASSWORD
+#
+# Replaces: Apache or nginx + php-fpm (Elgg ships install/config/htaccess.dist
+# and nginx.dist; there is no official image) and the system cron entry
+# for `elgg-cli cron`.
+
+x-elgg-env: &elgg-env
+  ELGG_DB_HOST: db
+  ELGG_DB_PORT: 3306
+  ELGG_DB_NAME: elgg
+  ELGG_DB_USER: elgg
+  ELGG_DB_PASSWORD: elgg
+
+services:
+  ephpm:
+    build: .
+    image: recipes-elgg
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      <<: *elgg-env
+      # Used by the first-start install only (stored in the database after).
+      ELGG_WWWROOT: ${ELGG_WWWROOT:-http://localhost:${EPHPM_PORT:-8080}/}
+      ELGG_ADMIN_USERNAME: ${ELGG_ADMIN_USERNAME:-admin}
+      ELGG_ADMIN_PASSWORD: ${ELGG_ADMIN_PASSWORD:?set ELGG_ADMIN_PASSWORD}
+      ELGG_ADMIN_EMAIL: ${ELGG_ADMIN_EMAIL:-admin@example.com}
+      ELGG_SITE_NAME: ${ELGG_SITE_NAME:-Elgg on ePHPm}
+    volumes:
+      - elgg-config:/var/www/elgg/elgg-config   # settings.php (written by the installer)
+      - elgg-data:/var/lib/elgg/data            # uploads, caches
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Elgg's cron (notifications, digests, garbage collection): upstream asks
+  # for `elgg-cli cron` every minute from the system crontab.
+  cron:
+    image: recipes-elgg
+    command: ["sh", "-c", "while :; do sleep 60; elgg-cli cron --quiet || true; done"]
+    environment:
+      <<: *elgg-env
+    volumes:
+      - elgg-config:/var/www/elgg/elgg-config
+      - elgg-data:/var/lib/elgg/data
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: elgg
+      MARIADB_USER: elgg
+      MARIADB_PASSWORD: elgg
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  elgg-config:
+  elgg-data:
+  db-data:

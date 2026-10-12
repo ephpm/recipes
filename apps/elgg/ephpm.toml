@@ -1,0 +1,44 @@
+# ePHPm configuration for Elgg.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Elgg's web root is the project root (index.php front controller).
+document_root = "/var/www/elgg"
+index_files = ["index.php"]
+# install/config/nginx.dist: `try_files $uri $uri/ @elgg`, where @elgg is
+# index.php (simplecache under /cache/ included).
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 8388608             # nginx.dist: client_max_body_size 8M
+
+[server.static]
+cache_control = "public, max-age=31536000"   # htaccess.dist: ExpiresDefault 1 year
+
+[server.security]
+# htaccess.dist forbids these (dot files are already refused by ePHPm's
+# hidden_files default). elgg-config/ holds settings.php with the DB
+# credentials; the plugin code under mod/ and the vendor tree are never
+# requested directly (assets are served from /cache/ by index.php). The
+# web installer is not needed: entrypoint.sh installs with elgg-cli.
+blocked_paths = ["/vendor/*", "/elgg-config/*", "/mod/*",
+                 "/composer.json", "/composer.lock", "/install.php"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    # htaccess.dist values
+    ["post_max_size", "8M"],
+    ["upload_max_filesize", "5M"],
+]

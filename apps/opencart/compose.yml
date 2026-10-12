@@ -1,0 +1,51 @@
+# OpenCart on ePHPm + MariaDB.
+#
+#   OPENCART_ADMIN_EMAIL=you@example.com OPENCART_ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080          the shop
+#   open http://localhost:8080/admin/   the admin
+#
+# Replaces: a nginx + php-fpm (or apache) host.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-opencart
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      DB_HOSTNAME: db
+      DB_PORT: 3306
+      DB_DATABASE: opencart
+      DB_USERNAME: opencart
+      DB_PASSWORD: opencart
+      # The URL customers use (stored in config.php at install time).
+      OPENCART_URL: ${OPENCART_URL:-http://localhost:${EPHPM_PORT:-8080}}
+      # First admin; the installer runs on the first start when both are set.
+      OPENCART_ADMIN_EMAIL: ${OPENCART_ADMIN_EMAIL:-}
+      OPENCART_ADMIN_PASSWORD: ${OPENCART_ADMIN_PASSWORD:-}
+    volumes:
+      - html:/var/www/opencart     # the whole shop: config, images, extensions, storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: opencart
+      MARIADB_USER: opencart
+      MARIADB_PASSWORD: opencart
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  html:
+  db-data:

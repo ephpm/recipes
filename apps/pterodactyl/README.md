@@ -69,7 +69,7 @@ address browsers and Wings use.
 docker compose exec ephpm ephpm php artisan p:user:make
 docker compose exec ephpm ephpm php artisan p:location:make --short=eu1 --long="Europe 1"
 docker compose exec ephpm ephpm php artisan p:environment:mail     # interactive
-docker compose exec ephpm ephpm cache --port 6380 reset            # after changing PHP files
+docker compose restart ephpm                                        # after changing PHP files (reloads OPcache)
 ```
 
 `php` on PATH inside the image is a shim for `ephpm php`, so
@@ -93,8 +93,8 @@ docker compose exec ephpm ephpm cache --port 6380 reset            # after chang
 * Mail goes to the log by default (`MAIL_MAILER=log`); set `MAIL_MAILER=smtp`
   and the `MAIL_*` variables for real mail.
 * OPcache runs with timestamp validation off (`ephpm serve` default); after
-  changing PHP files in the container, `ephpm cache --port 6380 reset` or
-  restart.
+  changing PHP files in the container, `docker compose restart ephpm`
+  (`ephpm cache reset` is a no-op on a single node in v0.11.3, `issues/nextcloud.md`).
 
 ## Known limitations
 

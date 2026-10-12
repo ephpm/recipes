@@ -1,0 +1,29 @@
+# ePHPm configuration for Bludit (flat-file CMS: no database).
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+# Bludit's .htaccess rewrite: anything that is not a file goes to index.php
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 33554432
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+blocked_paths = ["/bl-content/databases/*", "/bl-content/workspaces/*", "/bl-content/tmp/*", "/bl-kernel/*.php", "/.git*"]
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "32M"],
+    ["post_max_size", "32M"],
+]

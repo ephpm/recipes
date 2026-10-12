@@ -125,6 +125,7 @@ is untested, and the README says so.
 | [prestashop](apps/prestashop/) | prestashop | see README | see README | — | **blocked** — ePHPm's GD has no JPEG support: the installer's theme step calls `imagecreatefromjpeg()` (resizing the bundled language flag images) and aborts with `Call |
 | [hortusfox](apps/hortusfox/) | hortusfox | see README | see README | — | blocked — every photo HortusFox stores (plants, plant gallery, locations, inventory) goes through a thumbnail step that calls `imagecreatefromjpeg()`/`imagejpeg()` for  |
 | [pico](apps/pico/) | pico | see README | see README | — | blocked — upstream is end-of-life (README notice, March 2025; last release 2.1.4 from 2020) and it requires Twig 1.x, every release of which carries security advisories |
+| [bludit](apps/bludit/) | Bludit 3.22.0 | Apache + mod_php / nginx + php-fpm | flat-file | yes (native) | tested 2026-10-12, v0.11.3-php8.5 |
 | [koel](apps/koel/) | Koel 9.15 | nginx + fpm | MariaDB | — | **blocked** — ePHPm's GD has no JPEG/WebP (installer refuses to run) |
 | [monica](apps/monica/) | Monica 4 | Apache + mod_php + cron, Redis | MariaDB | — | **blocked** — ePHPm's GD has no FreeType (creating a contact answers 500) |
 

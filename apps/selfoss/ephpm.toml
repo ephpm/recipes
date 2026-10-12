@@ -1,0 +1,38 @@
+# ePHPm configuration for selfoss.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app"
+index_files = ["index.php"]
+# selfoss's .htaccess, as a fallback chain: static assets live in public/,
+# favicons and thumbnails in data/favicons|thumbnails/, everything else is
+# routed by index.php.
+fallback = ["$uri", "/public$uri", "/data$uri", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 10485760            # 10 MiB (OPML imports)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# Not served: the configuration, the database and logs under data/, and the
+# PHP code (only index.php is an entry point).
+blocked_paths = ["/*.ini", "/data/sqlite/*", "/data/logs/*", "/data/cache/*", "/data/fulltextrss/*",
+                 "/src/*", "/vendor/*", "/cliupdate.php", "/run.php", "/.git*"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120            # refreshing many feeds from the web UI
+memory_limit = "256M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+]

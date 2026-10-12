@@ -1,0 +1,43 @@
+# selfoss on ePHPm (its default SQLite database, single container + updater).
+#
+#   SELFOSS_PLAIN_PASSWORD='something-long' docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: Apache (.htaccess) or nginx + php-fpm, and the cron job running
+# cliupdate.php.
+
+x-selfoss-env: &selfoss-env
+  # Any config.ini key works as SELFOSS_<KEY> (selfoss's env_prefix).
+  SELFOSS_USERNAME: ${SELFOSS_USERNAME:-admin}
+  # Plain password, hashed at start; or SELFOSS_PASSWORD with a password_hash().
+  # With no username/password selfoss is open to everyone.
+  SELFOSS_PLAIN_PASSWORD: ${SELFOSS_PLAIN_PASSWORD:-}
+  SELFOSS_ITEMS_LIFETIME: "30"
+  SELFOSS_LOGGER_DESTINATION: "error_log"
+
+services:
+  ephpm:
+    build: .
+    image: recipes-selfoss
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: *selfoss-env
+    volumes:
+      - data:/app/data        # SQLite database, favicons, thumbnails, logs
+    restart: unless-stopped
+
+  # Feed refresh (upstream: a cron job running cliupdate.php).
+  updater:
+    image: recipes-selfoss
+    command: ["updater"]
+    environment:
+      <<: *selfoss-env
+      SELFOSS_UPDATE_INTERVAL: "900"
+    volumes:
+      - data:/app/data
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+volumes:
+  data:

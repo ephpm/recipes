@@ -1,0 +1,22 @@
+# ePHPm configuration for PostfixAdmin (MariaDB). The web root is public/.
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/app/public"
+index_files = ["index.php"]
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+]

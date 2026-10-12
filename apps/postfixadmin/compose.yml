@@ -1,0 +1,44 @@
+# PostfixAdmin on ePHPm + MariaDB.
+#   POSTFIXADMIN_SETUP_PASSWORD=... POSTFIXADMIN_ADMIN_PASSWORD=... docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+# Point Postfix/Dovecot at the same database (the `db` service) for the
+# mailbox tables PostfixAdmin manages.
+services:
+  ephpm:
+    build: .
+    image: recipes-postfixadmin
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      POSTFIXADMIN_DB_HOST: db
+      POSTFIXADMIN_DB_NAME: postfixadmin
+      POSTFIXADMIN_DB_USER: postfixadmin
+      POSTFIXADMIN_DB_PASSWORD: postfixadmin
+      # Password for /setup.php, stored hashed in config.local.php.
+      POSTFIXADMIN_SETUP_PASSWORD: ${POSTFIXADMIN_SETUP_PASSWORD:?set POSTFIXADMIN_SETUP_PASSWORD}
+      # First start: create this superadmin (needs a password with a digit and 8+ chars).
+      POSTFIXADMIN_ADMIN_EMAIL: ${POSTFIXADMIN_ADMIN_EMAIL:-admin@example.org}
+      POSTFIXADMIN_ADMIN_PASSWORD: ${POSTFIXADMIN_ADMIN_PASSWORD:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: postfixadmin
+      MARIADB_USER: postfixadmin
+      MARIADB_PASSWORD: postfixadmin
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  db-data:

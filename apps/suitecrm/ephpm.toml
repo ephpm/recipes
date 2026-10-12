@@ -1,0 +1,61 @@
+# ePHPm configuration for SuiteCRM 7 (MySQL/MariaDB database).
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+# SuiteCRM 7's URLs name their scripts (index.php?module=…, soap.php,
+# service/v4_1/rest.php); unknown paths are 404s, as with Apache.
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.request]
+max_body_size = 104857600           # 100 MiB attachments / imports (keep in sync with the ini below)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# The RedirectMatch 403 rules SuiteCRM's installer writes into .htaccess
+# (install/install_utils.php, handleHtaccess): no uploads, logs, cache
+# diagnostics, blowfish keys or build files, and no direct .php under the
+# library directories (those files also guard themselves with `sugarEntry`;
+# this is the second layer). ePHPm globs match one path segment per `*`,
+# hence one entry per depth.
+blocked_paths = [
+    "/*.log", "/upload/*", "/custom/blowfish/*", "/cache/diagnostic/*", "/emailmandelivery.php",
+    "/RoboFile.php", "/composer.json", "/composer.lock", "/files.md5", "/config.php",
+    "/config_override.php", "/config_si.php", "/tests/*", "/.git*",
+    "/soap/*.php", "/soap/*/*.php", "/soap/*/*/*.php", "/soap/*/*/*/*.php", "/soap/*/*/*/*/*.php", "/soap/*/*/*/*/*/*.php",
+    "/cache/*.php", "/cache/*/*.php", "/cache/*/*/*.php", "/cache/*/*/*/*.php", "/cache/*/*/*/*/*.php", "/cache/*/*/*/*/*/*.php",
+    "/xtemplate/*.php", "/xtemplate/*/*.php", "/xtemplate/*/*/*.php", "/xtemplate/*/*/*/*.php", "/xtemplate/*/*/*/*/*.php", "/xtemplate/*/*/*/*/*/*.php",
+    "/data/*.php", "/data/*/*.php", "/data/*/*/*.php", "/data/*/*/*/*.php", "/data/*/*/*/*/*.php", "/data/*/*/*/*/*/*.php",
+    "/examples/*.php", "/examples/*/*.php", "/examples/*/*/*.php", "/examples/*/*/*/*.php", "/examples/*/*/*/*/*.php", "/examples/*/*/*/*/*/*.php",
+    "/include/*.php", "/include/*/*.php", "/include/*/*/*.php", "/include/*/*/*/*.php", "/include/*/*/*/*/*.php", "/include/*/*/*/*/*/*.php",
+    "/log4php/*.php", "/log4php/*/*.php", "/log4php/*/*/*.php", "/log4php/*/*/*/*.php", "/log4php/*/*/*/*/*.php", "/log4php/*/*/*/*/*/*.php",
+    "/metadata/*.php", "/metadata/*/*.php", "/metadata/*/*/*.php", "/metadata/*/*/*/*.php", "/metadata/*/*/*/*/*.php", "/metadata/*/*/*/*/*/*.php",
+    "/modules/*.php", "/modules/*/*.php", "/modules/*/*/*.php", "/modules/*/*/*/*.php", "/modules/*/*/*/*/*.php", "/modules/*/*/*/*/*/*.php",
+    "/vendor/*.php", "/vendor/*/*.php", "/vendor/*/*/*.php", "/vendor/*/*/*/*.php", "/vendor/*/*/*/*/*.php", "/vendor/*/*/*/*/*/*.php",
+]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 240            # imports, mass updates, reports
+memory_limit = "512M"
+# SuiteCRM writes PHP into cache/ and custom/ at runtime (Studio, Module
+# Builder and Admin → Repair rebuild vardefs and language files) and
+# includes it right away, so OPcache must check timestamps (ePHPm's `serve`
+# default is off).
+opcache_validate_timestamps = true
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "100M"],
+    ["post_max_size", "100M"],
+]

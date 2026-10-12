@@ -1,0 +1,65 @@
+# SuiteCRM 7 on ePHPm + MariaDB.
+#
+#   SUITECRM_ADMIN_PASSWORD='something-long' docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port — keep
+#                                 SUITECRM_SITE_URL in sync with it)
+#
+# Replaces: Apache + mod_php and the system crontab running cron.php.
+
+x-suitecrm-env: &suitecrm-env
+  # The URL users open SuiteCRM at; written into config.php on install.
+  SUITECRM_SITE_URL: ${SUITECRM_SITE_URL:-http://localhost:8080}
+  SUITECRM_DB_HOST: db
+  SUITECRM_DB_PORT: 3306
+  SUITECRM_DB_NAME: suitecrm
+  SUITECRM_DB_USER: suitecrm
+  SUITECRM_DB_PASSWORD: suitecrm
+  # First start only (the installer):
+  SUITECRM_ADMIN_USER: ${SUITECRM_ADMIN_USER:-admin}
+  SUITECRM_ADMIN_PASSWORD: ${SUITECRM_ADMIN_PASSWORD:-change-me-please}
+
+services:
+  ephpm:
+    build: .
+    image: recipes-suitecrm
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: *suitecrm-env
+    volumes:
+      - app:/var/www/html          # the SuiteCRM tree: config.php, custom/, upload/, cache/
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # SuiteCRM's scheduler (workflows, inbound e-mail, reminders, index
+  # optimisation): cron.php every minute, on the same image and volume.
+  cron:
+    image: recipes-suitecrm
+    command: ["cron"]
+    environment: *suitecrm-env
+    volumes:
+      - app:/var/www/html
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: suitecrm
+      MARIADB_USER: suitecrm
+      MARIADB_PASSWORD: suitecrm
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  app:
+  db-data:

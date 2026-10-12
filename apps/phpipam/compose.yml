@@ -1,0 +1,39 @@
+# phpIPAM on ePHPm + MariaDB.
+#   IPAM_ADMIN_PASSWORD='something-long' docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port); user Admin
+services:
+  ephpm:
+    build: .
+    image: recipes-phpipam
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      IPAM_DATABASE_HOST: db
+      IPAM_DATABASE_NAME: phpipam
+      IPAM_DATABASE_USER: phpipam
+      IPAM_DATABASE_PASS: phpipam
+      # First start: password for the `Admin` user (default is ipamadmin).
+      IPAM_ADMIN_PASSWORD: ${IPAM_ADMIN_PASSWORD:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: phpipam
+      MARIADB_USER: phpipam
+      MARIADB_PASSWORD: phpipam
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  db-data:

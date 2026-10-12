@@ -128,6 +128,7 @@ is untested, and the README says so.
 | [bludit](apps/bludit/) | Bludit 3.22.0 | Apache + mod_php / nginx + php-fpm | flat-file | yes (native) | tested 2026-10-12, v0.11.3-php8.5 |
 | [postfixadmin](apps/postfixadmin/) | PostfixAdmin 4.0.5 | Apache/nginx + php-fpm in front of PostfixAdmin | MariaDB | no (not tried) | tested 2026-10-12, v0.11.3-php8.5 |
 | [phpsysinfo](apps/phpsysinfo/) | phpSysInfo 3.4.7 | Apache/nginx + PHP | none | yes (native) | tested 2026-10-12, v0.11.3-php8.5 |
+| [phpipam](apps/phpipam/) | phpIPAM 1.8.3 | Apache + mod_php + cron | MariaDB | — | **blocked** — ePHPm has no `sockets` extension, which phpIPAM requires (`issues/phpipam.md`) |
 | [koel](apps/koel/) | Koel 9.15 | nginx + fpm | MariaDB | — | **blocked** — ePHPm's GD has no JPEG/WebP (installer refuses to run) |
 | [monica](apps/monica/) | Monica 4 | Apache + mod_php + cron, Redis | MariaDB | — | **blocked** — ePHPm's GD has no FreeType (creating a contact answers 500) |
 

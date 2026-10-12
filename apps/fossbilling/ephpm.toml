@@ -1,0 +1,29 @@
+# ePHPm configuration for FOSSBilling (MariaDB).
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+# FOSSBilling's .htaccess: RewriteRule ^(.*)$ index.php?_url=/$1 [QSA]
+fallback = ["$uri", "$uri/", "/index.php?_url=$uri&$query_string"]
+
+[server.request]
+max_body_size = 33554432
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+blocked_paths = ["/config.php", "/config-sample.php", "/data/*", "/library/*", "/vendor/*", "/.git*"]
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "32M"],
+    ["post_max_size", "32M"],
+]

@@ -1,0 +1,44 @@
+# FOSSBilling on ePHPm + MariaDB.
+#   FOSSBILLING_ADMIN_PASSWORD='something-long' docker compose up -d
+#   open http://localhost:8080/admin   (EPHPM_PORT overrides the host port)
+services:
+  ephpm:
+    build: .
+    image: recipes-fossbilling
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      FOSSBILLING_URL: ${FOSSBILLING_URL:-http://localhost:${EPHPM_PORT:-8080}/}
+      FOSSBILLING_DB_HOST: db
+      FOSSBILLING_DB_NAME: fossbilling
+      FOSSBILLING_DB_USER: fossbilling
+      FOSSBILLING_DB_PASSWORD: fossbilling
+      # First start only: the installer's administrator account.
+      FOSSBILLING_ADMIN_EMAIL: ${FOSSBILLING_ADMIN_EMAIL:-admin@example.org}
+      FOSSBILLING_ADMIN_PASSWORD: ${FOSSBILLING_ADMIN_PASSWORD:-}
+    volumes:
+      - data:/var/www/html/data   # config.php lives in the image dir; see README
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: fossbilling
+      MARIADB_USER: fossbilling
+      MARIADB_PASSWORD: fossbilling
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  data:
+  db-data:

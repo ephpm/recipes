@@ -1,0 +1,44 @@
+# ePHPm configuration for Directory Lister.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+# Every page is `/?dir=…`, `/?file=…`, `/?zip=…`, `/?search=…` on index.php;
+# the only other things served are the built assets under app/assets and
+# app/images. Anything else is a 404.
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# index.php is the only entry point; the code, the Twig/route cache and the
+# templates are never served (the release relies on the listed files living
+# outside the web root, FILES_PATH=/data here). The patterns are matched
+# against the request URI, not the executed script (issues/shaarli.md), so
+# "/" — which reaches index.php through index_files — is listed too; every
+# Directory Lister URL is "/?…".
+allowed_php_paths = ["/", "/index.php"]
+blocked_paths = ["/app/cache/*", "/app/config/*", "/app/src/*", "/app/vendor/*",
+                 "/app/views/*", "/app/translations/*", "/.env", "/.env.example"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+# Zip downloads of large directories stream for a while.
+max_execution_time = 600
+memory_limit = "256M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+]
+
+[server.timeouts]
+request = 660                       # above [php] max_execution_time for big zips

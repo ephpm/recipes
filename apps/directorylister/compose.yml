@@ -1,0 +1,29 @@
+# Directory Lister on ePHPm.
+#
+#   docker compose up -d
+#   put files in the `files` volume (or bind-mount a directory on /data)
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: a web server (Apache/nginx) + php-fpm in front of the release.
+# Directory Lister has no database; it lists /data read-only.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-directorylister
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # Every option in https://docs.directorylister.com/configuration can
+      # be set here (APP_LANGUAGE, SITE_TITLE, DISPLAY_READMES, ZIP_DOWNLOADS,
+      # SORT_ORDER, HIDDEN_FILES_LIST, HIDE_DOT_FILES, DATE_FORMAT, ...).
+      SITE_TITLE: ${SITE_TITLE:-Directory Lister}
+      ZIP_DOWNLOADS: ${ZIP_DOWNLOADS:-true}
+    volumes:
+      # The listed files. To publish a directory on the host instead:
+      #   - /srv/public-files:/data:ro
+      - files:/data
+    restart: unless-stopped
+
+volumes:
+  files:

@@ -1,0 +1,71 @@
+# Ampache on ePHPm + MariaDB.
+#
+#   AMPACHE_ADMIN_PASSWORD='something-long' docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   put music in the `media` volume (or bind-mount a host directory on
+#   /media) and add it as a local catalog
+#
+# Replaces: the ampache/ampache image (Apache + mod_php + cron, supervisord).
+
+x-ampache-env: &ampache-env
+  # Public host and port for the absolute URLs Ampache builds (stream links,
+  # redirects). Set both to what users type in the browser; the port must
+  # be the published one.
+  AMPACHE_HTTP_HOST: ${AMPACHE_HTTP_HOST:-localhost}
+  AMPACHE_HTTP_PORT: ${EPHPM_PORT:-8080}
+  AMPACHE_DB_HOST: db
+  AMPACHE_DB_PORT: 3306
+  AMPACHE_DB_NAME: ampache
+  AMPACHE_DB_USER: ampache
+  AMPACHE_DB_PASSWORD: ampache
+  # the installer creates the database and the user above with this account
+  AMPACHE_DB_ADMIN_USER: root
+  AMPACHE_DB_ADMIN_PASSWORD: root
+  # First start only:
+  AMPACHE_ADMIN_USER: ${AMPACHE_ADMIN_USER:-admin}
+  AMPACHE_ADMIN_PASSWORD: ${AMPACHE_ADMIN_PASSWORD:-}
+
+services:
+  ephpm:
+    build: .
+    image: recipes-ampache
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: *ampache-env
+    volumes:
+      - config:/app/config     # ampache.cfg.php
+      - media:/media           # your music (or a bind mount)
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Ampache's cron process (stats, garbage collection, catalog cache).
+  cron:
+    image: recipes-ampache
+    command: ["cron"]
+    environment: *ampache-env
+    volumes:
+      - config:/app/config
+      - media:/media
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  config:
+  media:
+  db-data:

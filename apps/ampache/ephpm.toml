@@ -1,0 +1,39 @@
+# ePHPm configuration for Ampache 8 (MySQL/MariaDB).
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Ampache's web root is public/; src/, config/, vendor/ and bin/ sit above it.
+document_root = "/app/public"
+index_files = ["index.php"]
+# Real files first; everything else goes to ephpm-front.php, which maps the
+# Subsonic API's /rest/<action>.view URLs to rest/index.php (the rewrite in
+# public/rest/.htaccess.dist) and answers 404 for the rest.
+fallback = ["$uri", "$uri/", "/ephpm-front.php?$query_string"]
+
+[server.request]
+max_body_size = 268435456           # 256 MiB uploads (Ampache's upload catalog; keep in sync with the ini below)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# public/.htaccess.dist denies these in the web root.
+blocked_paths = ["/*.dist", "/*/*.dist", "/phpinfo.php"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 240            # catalog actions started from the web UI
+memory_limit = "512M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "256M"],
+    ["post_max_size", "256M"],
+]

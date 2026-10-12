@@ -15,7 +15,10 @@ max_body_size = 33554432            # 32 MiB (product images, CSV imports)
 cache_control = "public, max-age=86400"
 
 [server.security]
-blocked_paths = ["/.env", "/storage/*", "/vendor/*"]
+# document_root is public/, so the app code, .env and vendor/ are outside it.
+# (Do not block /vendor/* or /storage/*: public/vendor holds published
+# theme assets and public/storage is the public-disk symlink.)
+blocked_paths = ["/.env", "/.git*"]
 # multi-tenant-only knobs; set explicitly so single-site mode does not warn
 open_basedir = false
 disable_shell_exec = false

@@ -18,6 +18,8 @@ wait_http "$BASE/login" 200 600
 # the base image's E2E fixtures (issues/joomla.md) must not be served
 fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
 expect_body "$BASE/" 'href="/shop/red-t-shirt"'          # the demo catalogue on the home page
+expect_status "$BASE/vendor/shop/themes/default/app.css" 200   # published theme assets are served
+expect_status "$BASE/build/manifest.json" 200                  # the Vite bundle (login pages)
 
 # 1. shop workflow: product page -> add to basket -> basket shows it
 jar="$(cookie_jar)"

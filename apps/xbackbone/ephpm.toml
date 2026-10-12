@@ -1,0 +1,11 @@
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+[server.request]
+max_body_size = 536870912
+[php]
+max_execution_time = 120
+memory_limit = "256M"
+ini_overrides = [["display_errors","Off"],["log_errors","On"],["upload_max_filesize","512M"],["post_max_size","512M"]]

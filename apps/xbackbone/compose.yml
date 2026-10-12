@@ -1,0 +1,21 @@
+# XBackBone on ePHPm (single container, SQLite database inside the volume).
+#   XBACKBONE_ADMIN_PASSWORD='something-long' docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port); user admin
+services:
+  ephpm:
+    build: .
+    image: recipes-xbackbone
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # First start only. XBACKBONE_BASE_URL must be the address users open it at.
+      XBACKBONE_ADMIN_PASSWORD: ${XBACKBONE_ADMIN_PASSWORD:-}
+      XBACKBONE_ADMIN_EMAIL: ${XBACKBONE_ADMIN_EMAIL:-admin@example.org}
+      XBACKBONE_BASE_URL: ${XBACKBONE_BASE_URL:-http://localhost:${EPHPM_PORT:-8080}}
+    volumes:
+      - storage:/var/www/html/storage              # uploads + config.php
+      - database:/var/www/html/resources/database  # SQLite database
+    restart: unless-stopped
+volumes:
+  storage:
+  database:

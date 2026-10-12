@@ -129,6 +129,7 @@ is untested, and the README says so.
 | [postfixadmin](apps/postfixadmin/) | PostfixAdmin 4.0.5 | Apache/nginx + php-fpm in front of PostfixAdmin | MariaDB | no (not tried) | tested 2026-10-12, v0.11.3-php8.5 |
 | [phpsysinfo](apps/phpsysinfo/) | phpSysInfo 3.4.7 | Apache/nginx + PHP | none | yes (native) | tested 2026-10-12, v0.11.3-php8.5 |
 | [phpipam](apps/phpipam/) | phpIPAM 1.8.3 | Apache + mod_php + cron | MariaDB | — | **blocked** — ePHPm has no `sockets` extension, which phpIPAM requires (`issues/phpipam.md`) |
+| [xbackbone](apps/xbackbone/) | XBackBone 3.8.2 | Apache/nginx + php-fpm | SQLite | yes (native SQLite) | tested 2026-10-12, v0.11.3-php8.5 |
 | [koel](apps/koel/) | Koel 9.15 | nginx + fpm | MariaDB | — | **blocked** — ePHPm's GD has no JPEG/WebP (installer refuses to run) |
 | [monica](apps/monica/) | Monica 4 | Apache + mod_php + cron, Redis | MariaDB | — | **blocked** — ePHPm's GD has no FreeType (creating a contact answers 500) |
 

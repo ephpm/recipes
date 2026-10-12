@@ -36,6 +36,9 @@ RUN mkdir -p /opt/ephpm-ext \
 # ── Stage 2: the runtime image ───────────────────────────────────────────────
 FROM docker.io/ephpm/ephpm:${EPHPM_TAG}
 
+# The base image ships ePHPm's E2E fixtures in /var/www/html (phpinfo()
+# among them, issues/joomla.md): start from an empty web root.
+RUN rm -rf /var/www/html
 COPY --from=src /src /var/www/html
 COPY --from=src /opt/ephpm-ext/apcu.so /opt/ephpm-ext/apcu.so
 COPY ephpm.toml /etc/ephpm/

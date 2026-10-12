@@ -19,6 +19,8 @@ run_variant() {
     echo "=== variant: $1 ==="
     compose_up
     wait_http "$BASE/admin/install.php" 200 180
+    # the base image's E2E fixtures (issues/joomla.md) must not be served
+    fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
 
     # 1. installer (creates the tables)
     expect_body "$BASE/admin/install.php" "successfully" --data "install=Install+YOURLS"

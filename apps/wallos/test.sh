@@ -27,6 +27,8 @@ run_variant() {
     compose_up
     # with no user yet, the login page sends you to the registration form
     wait_http "$BASE/registration.php" 200 180
+    # the base image's E2E fixtures (issues/joomla.md) must not be served
+    fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
     expect_redirect "$BASE/login.php" "registration.php"
 
     # 1. register the first user (becomes the admin)

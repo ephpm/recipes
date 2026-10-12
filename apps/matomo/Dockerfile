@@ -22,6 +22,9 @@ RUN curl -fsSL -o /matomo.zip "https://builds.matomo.org/matomo-${MATOMO_VERSION
 # ── Stage 2: the runtime image ───────────────────────────────────────────────
 FROM docker.io/ephpm/ephpm:${EPHPM_TAG}
 
+# The base image ships ePHPm's E2E fixtures in /var/www/html (phpinfo()
+# among them, issues/joomla.md): start from an empty web root.
+RUN rm -rf /var/www/html
 COPY --from=src /src /var/www/html
 COPY php /usr/local/bin/php
 COPY ephpm.toml /etc/ephpm/ephpm.toml

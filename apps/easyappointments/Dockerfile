@@ -24,6 +24,9 @@ RUN curl -fsSL -o /ea.zip \
 # ── Stage 2: the runtime image ───────────────────────────────────────────────
 FROM docker.io/ephpm/ephpm:${EPHPM_TAG}
 
+# The base image ships ePHPm's E2E fixtures in /var/www/html (phpinfo()
+# among them, issues/joomla.md): start from an empty web root.
+RUN rm -rf /var/www/html
 COPY --from=src /src /var/www/html
 COPY ephpm.toml /etc/ephpm/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

@@ -28,6 +28,9 @@ RUN curl -fsSL -o /espocrm.zip \
 FROM docker.io/ephpm/ephpm:${EPHPM_TAG}
 
 # Same location as the official image.
+# The base image ships ePHPm's E2E fixtures in /var/www/html (phpinfo()
+# among them, issues/joomla.md): start from an empty web root.
+RUN rm -rf /var/www/html
 COPY --from=src /src /var/www/html
 COPY front.php /var/www/html/ephpm-front.php
 COPY ephpm.toml /etc/ephpm/

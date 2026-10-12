@@ -13,6 +13,8 @@ run_variant() {
     compose_up
     # (wp-login.php redirects to the installer until WordPress is installed)
     wait_http "$BASE/wp-admin/install.php" 200 180
+    # the base image's E2E fixtures (issues/joomla.md) must not be served
+    fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
 
     # 1. web installer (creates the tables)
     expect_status "$BASE/wp-admin/install.php?step=2" 200 \

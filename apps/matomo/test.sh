@@ -12,6 +12,8 @@ ADMIN_PASS="recipe-pass-123"
 
 compose_up
 wait_http "$BASE/" 200 180
+# the base image's E2E fixtures (issues/joomla.md) must not be served
+fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
 expect_body "$BASE/" 'Installation'
 
 jar="$(cookie_jar)"

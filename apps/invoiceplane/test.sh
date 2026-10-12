@@ -21,6 +21,8 @@ run_variant() {
     compose_up
     # "/" redirects to the login page (302); wait for the login page itself.
     wait_http "$BASE/sessions/login" 200 240
+    # the base image's E2E fixtures (issues/joomla.md) must not be served
+    fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
 
     # 1. the entrypoint's migration + default user finished
     for _ in $(seq 1 60); do

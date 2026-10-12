@@ -19,6 +19,8 @@ run_variant() {
     compose_up
     # "/" redirects to the installer (307) until the app is installed.
     wait_http "$BASE/index.php/installation" 200 240
+    # the base image's E2E fixtures (issues/joomla.md) must not be served
+    fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
 
     local jar; jar="$(cookie_jar)"
     curl -s -o /dev/null -c "$jar" "$BASE/index.php/installation"

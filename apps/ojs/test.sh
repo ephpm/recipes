@@ -21,6 +21,8 @@ run_variant() {
     # not installed: every page shows the installer (served through the
     # PATH_INFO front controller — /index.php/index/install)
     wait_http "$BASE/index.php/index/en/install" 200 300
+    # the base image's E2E fixtures (issues/joomla.md) must not be served
+    fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
     expect_body "$BASE/index.php/index/en/install" "OJS Installation"
 
     # 1. the installer POST (what pkp/containers' pkp-cli-install sends)

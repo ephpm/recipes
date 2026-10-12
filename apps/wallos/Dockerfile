@@ -30,6 +30,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends cron \
     && rm -rf /var/lib/apt/lists/*
 
+# The base image ships ePHPm's E2E fixtures in /var/www/html (phpinfo()
+# among them, issues/joomla.md): start from an empty web root.
+RUN rm -rf /var/www/html
 COPY --from=src /src /var/www/html
 COPY ephpm.toml /etc/ephpm/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

@@ -19,6 +19,8 @@ run_variant() {
     compose_up
     # status.php answers once ePHPm is up and the database reachable …
     wait_http "$BASE/status.php" 200 300
+    # the base image's E2E fixtures (issues/joomla.md) must not be served
+    fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
     # … and the first page request runs the installer (a minute or two)
     curl -s -o /dev/null --max-time 900 "$BASE/" || true
     local i=0

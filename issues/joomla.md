@@ -52,11 +52,20 @@ the actual image (`docker run --rm <tag> ls /var/www/html`) would catch it.
 
 ## Workaround in the recipes
 
-`apps/joomla`, `apps/phpbb`, `apps/roundcube` and `apps/librespeed` run
-`RUN rm -rf /var/www/html` before copying the app in, and their smoke tests
-assert `/info.php` is not served. **Other recipes with
-`document_root = "/var/www/html"` that copy onto the existing directory
-still serve the fixtures** (at the time of writing: adminer, dokuwiki,
-easyappointments, espocrm, invoiceplane, matomo, mediawiki, ojs,
-phpmyadmin, wallos, wordpress, yourls — each needs checking; a recipe whose
-entrypoint or Dockerfile replaces the directory is unaffected).
+Every recipe whose web root is `/var/www/html` runs `RUN rm -rf
+/var/www/html` before copying the app in, and its smoke test asserts that
+`/info.php` does not answer with phpinfo(): `joomla`, `phpbb`, `roundcube`,
+`librespeed`, `limesurvey`, and (2026-10-11, all re-tested) `adminer`,
+`dokuwiki`, `easyappointments`, `espocrm`, `grav`, `invoiceplane`, `matomo`,
+`mediawiki`, `nextcloud`, `ojs`, `phpmyadmin`, `wallos`, `wordpress`,
+`yourls` — every one of those served `/info.php`, `/shell_test.php`,
+`/uploads/shell.php` etc. before (their `fallback` starts with `$uri`, so an
+existing file wins). Recipes whose document root is a *subdirectory* of
+`/var/www/html` (`grocy`, `part-db`, `mautic`: `.../public`, `.../docroot`)
+do not serve the fixtures, but the files still sit in the image next to the
+app (`/var/www/html/vendor/secret.php` merges into the app's `vendor/`);
+other recipes use `/app`, `/opt/...` or `/var/www/<app>` and are unaffected.
+
+None of the recipes rely on the image's default `/etc/ephpm/ephpm.toml`
+(the test config): every Dockerfile copies its own over it, and the
+`EPHPM_CONFIG` variants point at their own files.

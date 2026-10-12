@@ -11,6 +11,8 @@ recipe_init adminer
 export ADMINER_DESIGN=hever ADMINER_PLUGINS="tables-filter"
 compose_up
 wait_http "$BASE/" 200 180
+# the base image's E2E fixtures (issues/joomla.md) must not be served
+fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
 expect_body "$BASE/" 'name="auth\[username\]"'
 expect_body "$BASE/" "auth\[server\]. value=.db."     # ADMINER_DEFAULT_SERVER prefilled
 

@@ -18,6 +18,8 @@ run_variant() {
     echo "=== variant: $1 ==="
     compose_up
     wait_http "$BASE/" 200 420
+    # the base image's E2E fixtures (issues/joomla.md) must not be served
+    fx="$(curl -s --max-time 30 "$BASE/info.php" || true)"; case "$fx" in *phpinfo*) echo "!!! the base image's info.php fixture is served" >&2; exit 1 ;; esac
     for _ in $(seq 1 90); do
         compose logs ephpm 2>/dev/null | grep "EspoCRM is ready" >/dev/null && break
         sleep 2

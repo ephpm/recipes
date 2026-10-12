@@ -1,0 +1,29 @@
+# FileGator on ePHPm.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in as admin / admin123 (or FILEGATOR_ADMIN_PASSWORD) and change it
+#
+# Replaces: the official filegator/filegator image (Apache + mod_php).
+# FileGator has no database: users are in private/users.json, files in
+# the repository volume.
+
+services:
+  ephpm:
+    build: .
+    image: recipes-filegator
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      # Applied to the admin account when users.json is first created.
+      FILEGATOR_ADMIN_PASSWORD: ${FILEGATOR_ADMIN_PASSWORD:-}
+      FILEGATOR_APP_NAME: ${FILEGATOR_APP_NAME:-FileGator}
+      FILEGATOR_TIMEZONE: ${FILEGATOR_TIMEZONE:-UTC}
+    volumes:
+      - repository:/var/www/filegator/repository   # the managed files
+      - private:/var/www/filegator/private         # users.json, sessions, logs, csrf_key
+    restart: unless-stopped
+
+volumes:
+  repository:
+  private:

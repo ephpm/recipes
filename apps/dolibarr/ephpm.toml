@@ -1,0 +1,49 @@
+# ePHPm configuration for Dolibarr ERP/CRM (MySQL/MariaDB).
+#
+# Dolibarr reads htdocs/conf/conf.php (written by entrypoint.sh from the
+# DOLI_* variables); ePHPm is the web server + PHP runtime. Every key is
+# documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/dolibarr/htdocs"
+index_files = ["index.php"]
+# Dolibarr's pages are real PHP files (no front controller); unknown paths
+# get its index.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.timeouts]
+request = 300                       # PDF generation, imports, module activation
+
+[server.request]
+max_body_size = 67108864            # 64 MiB — the official PHP_INI_UPLOAD_MAX_FILESIZE/POST_MAX_SIZE
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# The config and the (removed-after-install) installer stay out of reach.
+blocked_paths = ["/conf/*", "/install/*", "/*.htaccess"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 290            # below [server.timeouts] request so PHP's own timeout can fire
+memory_limit = "256M"               # the official PHP_INI_MEMORY_LIMIT
+ini_overrides = [
+    ["display_errors", "Off"],          # v0.11.3 still ships PHP's display_errors=1 under serve
+    ["log_errors", "On"],
+    ["upload_max_filesize", "64M"],
+    ["post_max_size", "64M"],
+    ["date.timezone", "UTC"],
+    ["session.use_strict_mode", "1"],   # as in the official image
+]
+
+# Loopback RESP listener so `ephpm kv ...` and `ephpm cache reset` can reach
+# the in-process store from inside the container.
+[kv.redis_compat]
+enabled = true
+listen = "127.0.0.1:6379"

@@ -1,0 +1,69 @@
+# Dolibarr ERP/CRM on ePHPm + MariaDB (+ the scheduled-jobs runner).
+#
+#   DOLI_ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080        log in as admin / DOLI_ADMIN_PASSWORD
+#
+# Replaces: the official dolibarr/dolibarr image (php-apache) and its cron
+# container.
+
+x-dolibarr: &dolibarr
+  image: recipes-dolibarr
+  environment:
+    # Same variable names as dolibarr/dolibarr.
+    DOLI_DB_HOST: db
+    DOLI_DB_HOST_PORT: 3306
+    DOLI_DB_NAME: dolibarr
+    DOLI_DB_USER: dolibarr
+    DOLI_DB_PASSWORD: dolibarr
+    DOLI_URL_ROOT: ${DOLI_URL_ROOT:-http://localhost:${EPHPM_PORT:-8080}}
+    DOLI_ADMIN_LOGIN: admin
+    DOLI_ADMIN_PASSWORD: ${DOLI_ADMIN_PASSWORD:-}
+    DOLI_COMPANY_NAME: ${DOLI_COMPANY_NAME:-}
+    DOLI_COMPANY_COUNTRYCODE: ${DOLI_COMPANY_COUNTRYCODE:-}
+    DOLI_ENABLE_MODULES: ${DOLI_ENABLE_MODULES:-}
+  volumes:
+    - documents:/var/www/documents             # uploaded files, generated PDFs, install.lock
+    - custom:/var/www/dolibarr/htdocs/custom   # external modules
+
+services:
+  ephpm:
+    <<: *dolibarr
+    build: .
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The official cron container: Dolibarr's scheduled jobs (module Cron)
+  # every 5 minutes, as the first admin, authenticated with the cron key the
+  # entrypoint keeps in the documents volume (DOLI_CRON_KEY to set your own).
+  cron:
+    <<: *dolibarr
+    command: ["sh", "-c", "while :; do ephpm php /var/www/dolibarr/scripts/cron/cron_run_jobs.php \"$$(cat /var/www/documents/.ephpm-cron-key)\" firstadmin; sleep 300; done"]
+    depends_on:
+      ephpm:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: dolibarr
+      MARIADB_USER: dolibarr
+      MARIADB_PASSWORD: dolibarr
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  documents:
+  custom:
+  db-data:

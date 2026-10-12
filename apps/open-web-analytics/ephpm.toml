@@ -1,0 +1,43 @@
+# ePHPm configuration for Open Web Analytics.
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# OWA's web root is its application root: index.php (admin UI and reports),
+# log.php (the tracker's event endpoint), api/ (REST API), public/ (assets).
+document_root = "/var/www/owa"
+index_files = ["index.php"]
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# The code, the vendor tree, the data directory (owa-config.php with the DB
+# password and the keys lives there) and the CLI are never served; only the
+# web entry points execute.
+allowed_php_paths = ["/", "/index.php", "/log.php", "/api/", "/api/index.php",
+                     "/install.php", "/blank.php"]
+blocked_paths = ["/Core/*", "/vendor/*", "/owa-data/*", "/conf/*", "/owa-config.php",
+                 "/owa-config-dist.php", "/cli.php", "/queue.php"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 300            # report queries over large date ranges
+memory_limit = "512M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    # OWA 1.14 emits PHP 8.5 deprecations ("Using null as an array offset")
+    # by the hundred per report; keep them out of the container log.
+    ["error_reporting", "E_ALL & ~E_DEPRECATED"],
+]
+
+[server.timeouts]
+request = 360                       # above [php] max_execution_time

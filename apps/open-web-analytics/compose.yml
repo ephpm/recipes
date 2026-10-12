@@ -1,0 +1,72 @@
+# Open Web Analytics on ePHPm + MariaDB.
+#
+#   OWA_ADMIN_PASSWORD=change-me docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port;
+#                                 OWA_PUBLIC_URL must match the URL)
+#   log in as admin / $OWA_ADMIN_PASSWORD, then add the tracking code of the
+#   default site (Admin -> Sites) to your pages
+#
+# Replaces: Apache/nginx + php-fpm, and the crontab entry for
+# `php cli.php cmd=schedule-run` (there is no official image).
+
+x-owa-env: &owa-env
+  OWA_DB_HOST: db
+  OWA_DB_PORT: 3306
+  OWA_DB_NAME: owa
+  OWA_DB_USER: owa
+  OWA_DB_PASSWORD: owa
+  # The URL OWA itself is served at (the tracker script loads from it).
+  OWA_PUBLIC_URL: ${OWA_PUBLIC_URL:-http://localhost:${EPHPM_PORT:-8080}/}
+
+services:
+  ephpm:
+    build: .
+    image: recipes-open-web-analytics
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      <<: *owa-env
+      # First start only: the admin account and the first tracked site.
+      OWA_ADMIN_USER: ${OWA_ADMIN_USER:-admin}
+      OWA_ADMIN_PASSWORD: ${OWA_ADMIN_PASSWORD:?set OWA_ADMIN_PASSWORD}
+      OWA_ADMIN_EMAIL: ${OWA_ADMIN_EMAIL:-admin@example.com}
+      OWA_SITE_DOMAIN: ${OWA_SITE_DOMAIN:-http://localhost/}
+    volumes:
+      - owa-data:/var/www/owa/owa-data     # owa-config.php (keys), caches, logs
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Scheduled jobs (partition rotation): upstream's crontab line is
+  #   * * * * * cd /path/to/owa && php cli.php cmd=schedule-run
+  cron:
+    image: recipes-open-web-analytics
+    command: ["sh", "-c", "while :; do sleep 60; owa-cli cmd=schedule-run || true; done"]
+    environment:
+      <<: *owa-env
+    volumes:
+      - owa-data:/var/www/owa/owa-data
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: owa
+      MARIADB_USER: owa
+      MARIADB_PASSWORD: owa
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  owa-data:
+  db-data:

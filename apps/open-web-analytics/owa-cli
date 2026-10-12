@@ -1,0 +1,6 @@
+#!/bin/sh
+# OWA's command line interface on ePHPm's embedded PHP:
+#   owa-cli cmd=update | cmd=flush-cache | cmd=schedule-status | ...
+# OWA 1.14 emits PHP 8.5 deprecation notices by the hundred; the server
+# config hides them (ephpm.toml), and so does this wrapper for the CLI.
+cd /var/www/owa && exec ephpm php -d 'error_reporting=E_ALL & ~E_DEPRECATED' cli.php "$@"

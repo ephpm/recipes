@@ -1,0 +1,11 @@
+# phpSysInfo on ePHPm (single container, stateless).
+#   docker compose up -d && open http://localhost:8080
+# It reports the *container's* view of /proc; to report the host, run with
+# `pid: host` and bind-mount the host's /proc, /sys (read-only) as you see fit.
+services:
+  ephpm:
+    build: .
+    image: recipes-phpsysinfo
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    restart: unless-stopped

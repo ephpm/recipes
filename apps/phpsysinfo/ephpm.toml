@@ -1,0 +1,23 @@
+# ePHPm configuration for phpSysInfo (no database, no state).
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php", "index.html"]
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+blocked_paths = ["/phpsysinfo.ini*", "/includes/*", "/plugins/*/*.ini", "/.git*"]
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 60
+memory_limit = "128M"
+ini_overrides = [
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+]

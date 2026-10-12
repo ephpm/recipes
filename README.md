@@ -77,6 +77,7 @@ is untested, and the README says so.
 | [part-db](apps/part-db/) | Part-DB | Apache + fpm | MariaDB | SQLite single container (app-native) | tested 2026-10-11, v0.11.3-php8.5 (both variants) |
 | [pelican](apps/pelican/) | Pelican Panel | Caddy + fpm + supervisord (scheduler, queue) | SQLite (app-native) | single container + scheduler/queue sidecars | tested 2026-10-11, v0.11.3-php8.5 |
 | [matomo](apps/matomo/) | Matomo | Apache + mod_php / nginx + fpm | MariaDB | no | tested 2026-10-11, v0.11.3-php8.5 |
+| [mantisbt](apps/mantisbt/) | MantisBT 2.28 | Apache + mod_php / nginx + fpm | MariaDB | no (untried) | tested 2026-10-12, v0.11.3-php8.5 |
 | [koel](apps/koel/) | Koel 9.15 | nginx + fpm | MariaDB | — | **blocked** — ePHPm's GD has no JPEG/WebP (installer refuses to run) |
 | [monica](apps/monica/) | Monica 4 | Apache + mod_php + cron, Redis | MariaDB | — | **blocked** — ePHPm's GD has no FreeType (creating a contact answers 500) |
 

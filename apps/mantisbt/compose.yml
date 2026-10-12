@@ -1,0 +1,54 @@
+# MantisBT on ePHPm + MariaDB.
+#
+#   MANTIS_ADMIN_PASSWORD='something-long' docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#
+# Replaces: Apache + mod_php (or nginx + php-fpm).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-mantisbt
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      MANTIS_DB_HOST: db
+      MANTIS_DB_NAME: bugtracker
+      MANTIS_DB_USER: mantis
+      MANTIS_DB_PASSWORD: mantis
+      TZ: UTC
+      # First start only: the installer's `administrator` / `root` account
+      # gets this name, password and e-mail.
+      MANTIS_ADMIN_USER: ${MANTIS_ADMIN_USER:-administrator}
+      MANTIS_ADMIN_PASSWORD: ${MANTIS_ADMIN_PASSWORD:-}
+      # (MantisBT rejects disposable domains such as example.com)
+      MANTIS_ADMIN_EMAIL: ${MANTIS_ADMIN_EMAIL:-root@localhost}
+      # MANTIS_WEBMASTER_EMAIL / MANTIS_FROM_EMAIL / MANTIS_SMTP_HOST: mail
+    volumes:
+      - config:/app/config                          # config_inc.php
+      - attachments:/var/lib/mantisbt/attachments   # uploaded files
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: bugtracker
+      MARIADB_USER: mantis
+      MARIADB_PASSWORD: mantis
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  config:
+  attachments:
+  db-data:

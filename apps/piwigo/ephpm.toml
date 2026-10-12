@@ -1,0 +1,42 @@
+# ePHPm configuration for Piwigo (MySQL/MariaDB database).
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+# Piwigo's URLs are index.php?/category/1, picture.php?/12/…, i.php?/upload/…
+# (the default `question_mark_in_urls`), so no rewrite is needed: unknown
+# paths are plain 404s, as with Apache and no .htaccess (ePHPm's default
+# chain would hand them to index.php).
+fallback = ["$uri", "$uri/", "=404"]
+
+[server.request]
+max_body_size = 104857600           # 100 MiB uploads (keep in sync with the ini below)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# Never served: the database credentials, logs, compiled templates and
+# caches under _data/, the installer's SQL files, and library code.
+blocked_paths = ["/local/config/*", "/_data/logs/*", "/_data/templates_c/*", "/_data/cache/*",
+                 "/install/*", "/include/*", "/.git*"]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+# Piwigo needs exec() for ImageMagick, so shell functions stay enabled.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 240            # resizing large photos / batch derivative generation
+memory_limit = "512M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "100M"],
+    ["post_max_size", "100M"],
+]

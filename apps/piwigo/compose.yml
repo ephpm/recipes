@@ -1,0 +1,57 @@
+# Piwigo on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in as admin / the PIWIGO_ADMIN_PASSWORD below, and change it
+#
+# Replaces: Apache/nginx + php-fpm (the linuxserver/piwigo image).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-piwigo
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      PIWIGO_DB_HOST: db
+      PIWIGO_DB_NAME: piwigo
+      PIWIGO_DB_USER: piwigo
+      PIWIGO_DB_PASSWORD: piwigo
+      # First start only: with an admin password set, the entrypoint runs
+      # the installer unattended. Leave it empty to use /install.php instead.
+      PIWIGO_ADMIN_USER: ${PIWIGO_ADMIN_USER:-admin}
+      PIWIGO_ADMIN_PASSWORD: ${PIWIGO_ADMIN_PASSWORD:-change-me-please}
+      PIWIGO_ADMIN_EMAIL: ${PIWIGO_ADMIN_EMAIL:-admin@example.com}
+      PIWIGO_LANGUAGE: en_UK
+    volumes:
+      - local:/var/www/html/local         # database.inc.php, config.inc.php, local CSS/languages
+      - data:/var/www/html/_data          # derivatives (thumbnails), caches, logs
+      - upload:/var/www/html/upload       # uploaded photos
+      - galleries:/var/www/html/galleries # photos synchronised from the file system
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: piwigo
+      MARIADB_USER: piwigo
+      MARIADB_PASSWORD: piwigo
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  local:
+  data:
+  upload:
+  galleries:
+  db-data:

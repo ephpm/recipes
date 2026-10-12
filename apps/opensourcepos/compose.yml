@@ -1,0 +1,54 @@
+# Open Source Point of Sale on ePHPm + MariaDB.
+#
+#   docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port)
+#   log in as admin / pointofsale and change the password
+#
+# Replaces: the jekkos/opensourcepos image (Apache + mod_php).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-opensourcepos
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      CI_ENVIRONMENT: production
+      # Host header whitelist (required in production). Include the port when
+      # it is not 80/443: OSPOS builds its URLs from the matching entry.
+      ALLOWED_HOSTNAMES: ${ALLOWED_HOSTNAMES:-localhost:8080,localhost}
+      FORCE_HTTPS: "false"
+      MYSQL_HOST_NAME: db
+      MYSQL_DB_NAME: ospos
+      MYSQL_USERNAME: ospos
+      MYSQL_PASSWORD: ospos
+      # ENCRYPTION_KEY / THROTTLE_KEY: optional; otherwise generated once into
+      # .env (kept in the writable volume).
+    volumes:
+      - writable:/app/writable        # .env (secrets), logs, cache, sessions, backups
+      - uploads:/app/public/uploads   # item pictures, company logo
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: ospos
+      MARIADB_USER: ospos
+      MARIADB_PASSWORD: ospos
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  writable:
+  uploads:
+  db-data:

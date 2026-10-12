@@ -24,3 +24,15 @@ succeed; reads return the empty string with `feof()` false.
 first `Currencies::exists()` / `Languages::getNames()` call dies with
 `Failed opening required '.../currencies/en.php.gz'`. In FOSSBilling that is
 the home page and admin login (HTTP 500 after a successful install).
+
+## Same root cause seen through `ZipArchive` (MODX recipe, 2026-10-12)
+
+`ZipArchive::extractTo()` of MODX 3.1.1's `core.transport.zip` (1957 entries)
+fails part-way: `getFromIndex()` returns false for 1379 of 1725 files with
+`getStatusString()` = `Zlib error: stream error`, while the other 346 read
+fine. MODX's CLI installer then aborts with "could not unpack
+core.transport.zip". `gzdecode()` on the same kind of data works, so the
+breakage looks specific to zlib's streaming inflate (the path used by
+`gzopen`, `compress.zlib://` and libzip) in the SDK build. Anything that
+unpacks zips with deflate entries (installers, plugin/theme/package
+managers, Composer-in-PHP) is likely affected.

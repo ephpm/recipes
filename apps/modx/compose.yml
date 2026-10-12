@@ -1,0 +1,45 @@
+# MODX Revolution on ePHPm + MariaDB.
+#   MODX_ADMIN_PASSWORD='something-long' docker compose up -d
+#   open http://localhost:8080/manager/   (user: admin)
+services:
+  ephpm:
+    build: .
+    image: recipes-modx
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      MODX_DB_HOST: db
+      MODX_DB_NAME: modx
+      MODX_DB_USER: modx
+      MODX_DB_PASSWORD: modx
+      MODX_ADMIN_USER: ${MODX_ADMIN_USER:-admin}
+      MODX_ADMIN_PASSWORD: ${MODX_ADMIN_PASSWORD:?set MODX_ADMIN_PASSWORD}
+      MODX_ADMIN_EMAIL: ${MODX_ADMIN_EMAIL:-admin@example.org}
+    volumes:
+      - core:/var/www/html/core             # core/ holds config, cache, packages
+      - assets:/var/www/html/assets
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: modx
+      MARIADB_USER: modx
+      MARIADB_PASSWORD: modx
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  core:
+  assets:
+  db-data:

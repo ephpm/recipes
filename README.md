@@ -131,6 +131,7 @@ is untested, and the README says so.
 | [phpipam](apps/phpipam/) | phpIPAM 1.8.3 | Apache + mod_php + cron | MariaDB | — | **blocked** — ePHPm has no `sockets` extension, which phpIPAM requires (`issues/phpipam.md`) |
 | [xbackbone](apps/xbackbone/) | XBackBone 3.8.2 | Apache/nginx + php-fpm | SQLite | yes (native SQLite) | tested 2026-10-12, v0.11.3-php8.5 |
 | [fossbilling](apps/fossbilling/) | FOSSBilling 0.8.8 | Apache/nginx + php-fpm + cron | MariaDB | — | **blocked** — ePHPm zlib file streams (`gzopen`, `compress.zlib://`) read nothing, so symfony/intl fails (`issues/fossbilling.md`) |
+| [modx](apps/modx/) | MODX Revolution 3.1.1 | Apache + mod_php / nginx + fpm | MariaDB | — | **blocked** — ePHPm zlib streams fail (`ZipArchive` "Zlib error: stream error"), the installer cannot unpack its package (`issues/fossbilling.md`) |
 | [koel](apps/koel/) | Koel 9.15 | nginx + fpm | MariaDB | — | **blocked** — ePHPm's GD has no JPEG/WebP (installer refuses to run) |
 | [monica](apps/monica/) | Monica 4 | Apache + mod_php + cron, Redis | MariaDB | — | **blocked** — ePHPm's GD has no FreeType (creating a contact answers 500) |
 

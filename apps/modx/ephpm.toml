@@ -1,0 +1,30 @@
+# ePHPm configuration for MODX Revolution (MariaDB).
+[server]
+listen = "0.0.0.0:8080"
+document_root = "/var/www/html"
+index_files = ["index.php"]
+# MODX friendly URLs (ht.access): RewriteRule ^(.*)$ index.php?q=$1 [L,QSA]
+fallback = ["$uri", "$uri/", "/index.php?q=$uri&$query_string"]
+
+[server.request]
+max_body_size = 33554432
+
+[server.static]
+cache_control = "public, max-age=3600"
+
+[server.security]
+blocked_paths = ["/core/*", "/setup/*", "/config.core.php", "/.git*"]
+# manager/ and connectors/ execute PHP
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120
+memory_limit = "512M"
+ini_overrides = [
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "32M"],
+    ["post_max_size", "32M"],
+]

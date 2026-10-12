@@ -1,0 +1,4 @@
+#!/bin/sh
+# `php` on PATH → the embedded PHP CLI (used by entrypoint.sh and Laravel's scheduler
+# and queue, and for `docker compose exec ephpm php ...`).
+exec ephpm php "$@"

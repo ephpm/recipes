@@ -1,0 +1,56 @@
+# Lychee on ePHPm + MariaDB.
+#
+#   LYCHEE_ADMIN_PASSWORD='something-long' docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port — keep
+#                                 APP_URL in sync with it)
+#
+# Replaces: the lycheeorg/lychee image (FrankenPHP / Octane).
+
+services:
+  ephpm:
+    build: .
+    image: recipes-lychee
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment:
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_ENV: production
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: lychee
+      DB_USERNAME: lychee
+      DB_PASSWORD: lychee
+      TIMEZONE: ${TIMEZONE:-UTC}
+      # First start only: create this administrator (otherwise the browser
+      # asks for one).
+      LYCHEE_ADMIN_USER: ${LYCHEE_ADMIN_USER:-admin}
+      LYCHEE_ADMIN_PASSWORD: ${LYCHEE_ADMIN_PASSWORD:-}
+    volumes:
+      - storage:/app/storage          # .env (APP_KEY), logs, sessions, caches
+      - uploads:/app/public/uploads   # the photos and their size variants
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: lychee
+      MARIADB_USER: lychee
+      MARIADB_PASSWORD: lychee
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  storage:
+  uploads:
+  db-data:

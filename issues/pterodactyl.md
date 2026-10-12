@@ -50,6 +50,20 @@ Other recipes with a Laravel scheduler sidecar that only ship the `php` shim
 individually here) are likely running no scheduled commands at all while
 their logs look healthy.
 
+**Follow-up (2026-10-11):** checked per recipe by evaluating
+`Illuminate\Console\Application::phpBinary()` in each built image with and
+without the variable. Without it, `phpBinary()` was `'/usr/local/bin/ephpm'`
+— so every `$schedule->command(...)` failed silently — in `bagisto`,
+`cachet`, `invoiceninja`, `krayin`, `laravel`, `linkace`, `pelican`,
+`snipe-it` and `speedtest-tracker` (on PHP 8.5). `akaunting` (on the
+php8.3 image) got `'php'`, which the shim on PATH already served. All of
+them, plus the blocked `koel` and `monica`, now set
+`ENV PHP_BINARY=/usr/local/bin/php` (the `laravel` recipe also gained the
+`php` shim), and each smoke test runs `<phpBinary()> artisan --version` the
+way the scheduler does and fails if it does not work. `bookstack`,
+`firefly-iii`, `heimdall` and `flarum` run no Laravel scheduler (Firefly's
+cron sidecar calls its HTTP cron endpoint), so they were left alone.
+
 ## Suspected fix in ePHPm
 
 `ephpm php` could set `PHP_BINARY` to something that re-enters the CLI —

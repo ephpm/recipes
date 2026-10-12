@@ -20,6 +20,8 @@ run_variant() {
     # the UI shell answers 200 once the app is up; migrations + the first
     # account take a few minutes on a fresh database
     wait_http "$BASE/" 200 480
+    # scheduled commands run as `<phpBinary()> artisan ...`; that must work (issues/pterodactyl.md)
+    run_in ephpm sh -c 'b="$(ephpm php -r "require \"vendor/autoload.php\"; echo Illuminate\Console\Application::phpBinary();")"; echo "phpBinary: $b"; eval "$b artisan --version"' || { echo "!!! <phpBinary> artisan does not run: scheduled commands would silently fail" >&2; exit 1; }
     expect_status "$BASE/api/v1/ping" 403     # authenticated endpoint: 403 without a token
 
     # 1. real workflow: log in through the API (the web app's own login call)

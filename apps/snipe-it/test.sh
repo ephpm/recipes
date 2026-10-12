@@ -35,6 +35,8 @@ run_variant() {
     compose_up
     # / redirects to the setup wizard until an admin exists
     wait_http "$BASE/setup" 200 300
+    # scheduled commands run as `<phpBinary()> artisan ...`; that must work (issues/pterodactyl.md)
+    run_in ephpm sh -c 'b="$(ephpm php -r "require \"vendor/autoload.php\"; echo Illuminate\Console\Application::phpBinary();")"; echo "phpBinary: $b"; eval "$b artisan --version"' || { echo "!!! <phpBinary> artisan does not run: scheduled commands would silently fail" >&2; exit 1; }
     expect_redirect "$BASE/" "/setup"
 
     jar="$(cookie_jar)"

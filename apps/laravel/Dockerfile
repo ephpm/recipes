@@ -38,6 +38,14 @@ FROM docker.io/ephpm/ephpm:${EPHPM_TAG}
 COPY --from=vendor /app /app
 COPY ephpm.toml ephpm.embedded.toml ephpm.worker.toml /etc/ephpm/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+# `php` on PATH for tools that re-invoke PHP, and PHP_BINARY pointing at it:
+# Laravel builds scheduled commands (and `queue:listen` workers) as
+# `<PHP binary> artisan ...`, taking the binary from Symfony's
+# PhpExecutableFinder, which returns the PHP_BINARY constant (`ephpm`,
+# ephpm#558) unless the PHP_BINARY environment variable is set. Without
+# this every `$schedule->command(...)` silently fails (issues/pterodactyl.md).
+RUN printf '#!/bin/sh\nexec ephpm php "$@"\n' > /usr/local/bin/php && chmod +x /usr/local/bin/php
+ENV PHP_BINARY=/usr/local/bin/php
 WORKDIR /app
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && rm -f .env \

@@ -37,6 +37,8 @@ run_variant() {
     compose_up
     # the installer runs before ePHPm starts listening
     wait_http "$BASE/" 200 900
+    # scheduled commands run as `<phpBinary()> artisan ...`; that must work (issues/pterodactyl.md)
+    run_in ephpm sh -c 'b="$(ephpm php -r "require \"vendor/autoload.php\"; echo Illuminate\Console\Application::phpBinary();")"; echo "phpBinary: $b"; eval "$b artisan --version"' || { echo "!!! <phpBinary> artisan does not run: scheduled commands would silently fail" >&2; exit 1; }
     expect_body "$BASE/" "Bagisto|bagisto"
 
     # 1. a customer signs up through the shop's registration form

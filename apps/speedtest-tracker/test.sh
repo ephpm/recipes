@@ -68,6 +68,8 @@ run_variant() {
     compose_up
     # the login page answers 200 once migrations are done
     wait_http "$BASE/admin/login" 200 480
+    # scheduled commands run as `<phpBinary()> artisan ...`; that must work (issues/pterodactyl.md)
+    run_in ephpm sh -c 'b="$(ephpm php -r "require \"vendor/autoload.php\"; echo Illuminate\Console\Application::phpBinary();")"; echo "phpBinary: $b"; eval "$b artisan --version"' || { echo "!!! <phpBinary> artisan does not run: scheduled commands would silently fail" >&2; exit 1; }
     expect_redirect "$BASE/admin" "/admin/login"
 
     # 1. real workflow: log in through the Filament login form (Livewire)

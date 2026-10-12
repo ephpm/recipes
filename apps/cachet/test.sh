@@ -17,6 +17,8 @@ run_variant() {
     echo "=== variant: $1 ==="
     compose_up
     wait_http "$BASE/" 200 600
+    # scheduled commands run as `<phpBinary()> artisan ...`; that must work (issues/pterodactyl.md)
+    run_in ephpm sh -c 'b="$(ephpm php -r "require \"vendor/autoload.php\"; echo Illuminate\Console\Application::phpBinary();")"; echo "phpBinary: $b"; eval "$b artisan --version"' || { echo "!!! <phpBinary> artisan does not run: scheduled commands would silently fail" >&2; exit 1; }
     for _ in $(seq 1 60); do
         compose logs ephpm 2>/dev/null | grep "Cachet is ready" >/dev/null && break
         sleep 2

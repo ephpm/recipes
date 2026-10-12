@@ -1,0 +1,36 @@
+# ePHPm configuration for InvoiceShelf (Laravel).
+# Every key is documented at https://ephpm.dev/reference/config/
+
+[server]
+listen = "0.0.0.0:8080"
+# Laravel's web root is public/; the application code sits above it.
+document_root = "/app/public"
+index_files = ["index.php"]
+# nginx try_files equivalent: anything that is not a file under public/
+# goes to the front controller.
+fallback = ["$uri", "$uri/", "/index.php?$query_string"]
+
+[server.request]
+max_body_size = 33554432            # 32 MiB: logos, expense receipts (keep in sync with the ini below)
+
+[server.static]
+cache_control = "public, max-age=86400"
+
+[server.security]
+# These three only act in multi-tenant (sites_dir) mode; set explicitly so
+# ePHPm does not warn about them being inert on this single-site deployment.
+open_basedir = false
+disable_shell_exec = false
+multi_tenant_hardening = false
+
+[php]
+max_execution_time = 120            # PDF generation
+memory_limit = "512M"
+ini_overrides = [
+    # ePHPm v0.11.3 still inherits PHP's compiled-in display_errors=1 under
+    # `serve`; keep warnings out of responses and in the container log.
+    ["display_errors", "Off"],
+    ["log_errors", "On"],
+    ["upload_max_filesize", "32M"],
+    ["post_max_size", "32M"],
+]

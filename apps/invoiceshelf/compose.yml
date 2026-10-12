@@ -1,0 +1,72 @@
+# InvoiceShelf on ePHPm + MariaDB.
+#
+#   INVOICESHELF_ADMIN_PASSWORD='something-long' docker compose up -d
+#   open http://localhost:8080   (EPHPM_PORT overrides the host port — keep
+#                                 APP_URL in sync with it)
+#
+# Replaces: the invoiceshelf/invoiceshelf image (nginx + php-fpm + cron).
+
+x-invoiceshelf-env: &invoiceshelf-env
+  APP_URL: ${APP_URL:-http://localhost:8080}
+  APP_ENV: production
+  # The SPA authenticates with Sanctum session cookies: list the host:port
+  # users open InvoiceShelf at.
+  SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:8080}
+  SESSION_DOMAIN: ${SESSION_DOMAIN:-localhost}
+  DB_CONNECTION: mysql
+  DB_HOST: db
+  DB_PORT: 3306
+  DB_DATABASE: invoiceshelf
+  DB_USERNAME: invoiceshelf
+  DB_PASSWORD: invoiceshelf
+  # First start only: finish the installation wizard unattended with this
+  # administrator and company (leave the password empty to use the wizard).
+  INVOICESHELF_ADMIN_EMAIL: ${INVOICESHELF_ADMIN_EMAIL:-admin@example.com}
+  INVOICESHELF_ADMIN_PASSWORD: ${INVOICESHELF_ADMIN_PASSWORD:-}
+  INVOICESHELF_ADMIN_NAME: ${INVOICESHELF_ADMIN_NAME:-Admin}
+  INVOICESHELF_COMPANY_NAME: ${INVOICESHELF_COMPANY_NAME:-My Company}
+
+services:
+  ephpm:
+    build: .
+    image: recipes-invoiceshelf
+    ports:
+      - "${EPHPM_PORT:-8080}:8080"
+    environment: *invoiceshelf-env
+    volumes:
+      - storage:/app/storage      # .env (APP_KEY), logos/uploads, logs, sessions
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Laravel's scheduler: overdue invoices/estimates, recurring invoices.
+  scheduler:
+    image: recipes-invoiceshelf
+    command: ["scheduler"]
+    environment: *invoiceshelf-env
+    volumes:
+      - storage:/app/storage
+    depends_on:
+      - ephpm
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: invoiceshelf
+      MARIADB_USER: invoiceshelf
+      MARIADB_PASSWORD: invoiceshelf
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  storage:
+  db-data:
